@@ -4,9 +4,34 @@ set -e
 PROJECT_DIR="$HOME/Documents/Claude/Projects/Luka/Luka"
 cd "$PROJECT_DIR"
 
-# ── Primeiro: chmod +x nos scripts novos ────────────────────────
-chmod +x "$PROJECT_DIR"/*.command 2>/dev/null || true
-echo "✓ chmod +x aplicado em todos os .command"
+# ── chmod +x em todos os scripts ────────────────────────────────
+chmod +x "$PROJECT_DIR"/*.command "$PROJECT_DIR"/*.sh 2>/dev/null || true
+echo "✓ chmod +x aplicado"
+echo ""
+
+# ── Git push (se commit existir e ainda não pushado) ─────────────
+if git log --oneline 2>/dev/null | grep -q .; then
+  echo "▶ Configurando SSH para github.com..."
+  mkdir -p ~/.ssh && chmod 700 ~/.ssh
+  # Adiciona chave ED25519 oficial do GitHub diretamente (sem ssh-keyscan)
+  if ! grep -q "github.com" ~/.ssh/known_hosts 2>/dev/null; then
+    echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH8nwfpJB3+dM22nLh" >> ~/.ssh/known_hosts
+    echo "github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=" >> ~/.ssh/known_hosts
+    chmod 600 ~/.ssh/known_hosts
+    echo "✓ Chaves do GitHub adicionadas ao known_hosts"
+  else
+    echo "✓ github.com já no known_hosts"
+  fi
+  # SSH config para não perguntar fingerprint
+  if ! grep -q "github.com" ~/.ssh/config 2>/dev/null; then
+    printf "\nHost github.com\n  StrictHostKeyChecking yes\n  IdentityFile ~/.ssh/id_ed25519\n" >> ~/.ssh/config
+    chmod 600 ~/.ssh/config
+  fi
+  echo "▶ Fazendo push para GitHub..."
+  git push -u origin main && \
+    echo "✓ Push concluído! https://github.com/Luizeduardompf/luka-psi" || \
+    echo "⚠ Push falhou — verifique se a SSH key está configurada no GitHub"
+fi
 echo ""
 
 echo ""
