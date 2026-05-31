@@ -441,6 +441,70 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Divider */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginTop: theme.spacing.xl,
+            gap: theme.spacing.sm,
+          }}
+        >
+          <View
+            style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }}
+          />
+          <Text
+            style={{ color: theme.colors.text.tertiary, fontSize: 13 }}
+          >
+            ou
+          </Text>
+          <View
+            style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }}
+          />
+        </View>
+
+        {/* Google login button (UI only) */}
+        <TouchableOpacity
+          onPress={() => Alert.alert('Em breve', 'Login com Google em desenvolvimento.')}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            borderWidth: 1.5,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radius.md,
+            paddingVertical: 14,
+            marginTop: theme.spacing.md,
+            backgroundColor: theme.colors.surface,
+          }}
+        >
+          {/* Google "G" icon */}
+          <View
+            style={{
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: '#4285F4',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>
+              G
+            </Text>
+          </View>
+          <Text
+            style={{
+              fontSize: 15,
+              fontWeight: '500',
+              color: theme.colors.text.primary,
+            }}
+          >
+            Continuar com Google
+          </Text>
+        </TouchableOpacity>
+
         {/* Sign up */}
         <View
           style={{

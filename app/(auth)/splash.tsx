@@ -16,7 +16,8 @@ import { useSessionStore } from '@/stores/session.store'
 import { config } from '@/constants/config'
 
 export default function SplashScreen() {
-  const { isAuthenticated, isInitialized } = useSessionStore()
+  const { session, isInitialized } = useSessionStore()
+  const isAuthenticated = !!session
 
   const opacity = useSharedValue(0)
   const scale = useSharedValue(0.82)

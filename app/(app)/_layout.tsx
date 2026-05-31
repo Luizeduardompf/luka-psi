@@ -5,7 +5,8 @@ import { useSessionStore } from '@/stores/session.store'
 import { theme } from '@/constants/theme'
 
 export default function AppLayout() {
-  const { isAuthenticated, isInitialized } = useSessionStore()
+  const { session, profile, isInitialized } = useSessionStore()
+  const isAuthenticated = !!session
 
   if (!isInitialized) {
     return (
@@ -24,6 +25,11 @@ export default function AppLayout() {
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/splash" />
+  }
+
+  // First login: redirect to onboarding
+  if (session && profile && !profile.onboarding_completed) {
+    return <Redirect href="/(auth)/onboarding" />
   }
 
   return (
@@ -61,6 +67,24 @@ export default function AppLayout() {
           title: 'Pacientes',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="forms"
+        options={{
+          title: 'Formulários',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="document-text-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Configurações',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
           ),
         }}
       />

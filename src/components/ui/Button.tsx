@@ -5,13 +5,14 @@ import {
   ActivityIndicator,
   TouchableOpacityProps,
   View,
+  ViewStyle,
 } from 'react-native'
 import { theme } from '@/constants/theme'
 
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
-interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
+export interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
   title: string
   variant?: ButtonVariant
   size?: ButtonSize
@@ -19,6 +20,7 @@ interface ButtonProps extends Omit<TouchableOpacityProps, 'style'> {
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
   fullWidth?: boolean
+  style?: ViewStyle
 }
 
 const variantStyles: Record<
@@ -52,6 +54,7 @@ export const Button = memo(function Button({
   rightIcon,
   fullWidth = false,
   onPress,
+  style,
   ...rest
 }: ButtonProps) {
   const vs = variantStyles[variant]
@@ -79,6 +82,7 @@ export const Button = memo(function Button({
         ...(variant === 'primary' && !isDisabled
           ? theme.shadow.sm
           : undefined),
+        ...style,
       }}
       {...rest}
     >

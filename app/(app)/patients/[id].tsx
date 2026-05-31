@@ -15,11 +15,14 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Card } from '@/components/ui/Card'
 import { Badge, statusVariantMap, statusLabelMap } from '@/components/ui/Badge'
 import { PatientForm } from '@/components/patients/PatientForm'
+import { PatientFormsTab } from '@/components/forms/PatientFormsTab'
 import { theme } from '@/constants/theme'
 import { usePatient, useUpdatePatient, useDeletePatient } from '@/hooks/usePatients'
-import { formatDate, formatPhone, formatCpf } from '@/utils/format'
+import { formatDate, formatPhone, formatCpf, getPatientAvatarUrl } from '@/utils/format'
 import { PatientSchemaData } from '@/utils/validators'
 import { PatientStatus } from '@/types/app.types'
+
+type ActiveTab = 'info' | 'forms'
 
 function InfoRow({
   icon,
@@ -67,16 +70,22 @@ function InfoRow({
 }
 
 const GENDER_LABEL: Record<string, string> = {
+  female_cis: 'Feminino (cisgênero)',
+  male_cis: 'Masculino (cisgênero)',
+  female_trans: 'Feminino (transgênero)',
+  male_trans: 'Masculino (transgênero)',
+  non_binary: 'Não binário',
+  prefer_not_to_say: 'Prefere não informar',
   male: 'Masculino',
   female: 'Feminino',
   other: 'Outro',
-  prefer_not_to_say: 'Prefere não informar',
 }
 
 export default function PatientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const insets = useSafeAreaInsets()
   const [editVisible, setEditVisible] = useState(false)
+  const [activeTab, setActiveTab] = useState<ActiveTab>('info')
 
   const { data: patient, isLoading, refetch } = usePatient(id)
   const updateMutation = useUpdatePatient(id)
@@ -109,20 +118,38 @@ export default function PatientDetailScreen() {
         updateMutation.mutate(
           {
             full_name: data.full_name,
+            preferred_name: data.preferred_name || null,
             email: data.email || null,
             phone: data.phone || null,
             cpf: data.cpf || null,
+            nif: data.nif || null,
             date_of_birth: data.date_of_birth || null,
-            gender: (data.gender || null) as
-              | 'male'
-              | 'female'
-              | 'other'
-              | 'prefer_not_to_say'
-              | null,
+            gender: data.gender || null,
+            profession: data.profession || null,
+            education: data.education || null,
+            civil_status_id: data.civil_status_id || null,
             status: data.status,
-            notes: data.notes || null,
+            address: data.address || null,
+            billing_address: data.billing_address || null,
+            postal_code: data.postal_code || null,
+            city: data.city || null,
+            spouse_name: data.spouse_name || null,
+            spouse_phone: data.spouse_phone || null,
+            spouse_email: data.spouse_email || null,
+            tutor_name: data.tutor_name || null,
+            tutor_phone: data.tutor_phone || null,
+            tutor_email: data.tutor_email || null,
+            additional_contacts: data.additional_contacts ?? [],
             emergency_contact_name: data.emergency_contact_name || null,
             emergency_contact_phone: data.emergency_contact_phone || null,
+            insurer_id: data.insurer_id || null,
+            plan_id: data.plan_id || null,
+            sns_user_number: data.sns_user_number || null,
+            local_protocol: data.local_protocol || null,
+            consent_rgpd: data.consent_rgpd ?? false,
+            consent_informed: data.consent_informed ?? false,
+            consent_minors: data.consent_minors ?? false,
+            notes: data.notes || null,
           },
           {
             onSuccess: () => {
@@ -212,6 +239,49 @@ export default function PatientDetailScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Tab switcher */}
+      <View
+        style={{
+          flexDirection: 'row',
+          backgroundColor: theme.colors.surface,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.border,
+        }}
+      >
+        {(['info', 'forms'] as ActiveTab[]).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            style={{
+              flex: 1,
+              paddingVertical: 12,
+              alignItems: 'center',
+              borderBottomWidth: 2,
+              borderBottomColor:
+                activeTab === tab ? theme.colors.primary : 'transparent',
+            }}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color:
+                  activeTab === tab
+                    ? theme.colors.primary
+                    : theme.colors.text.tertiary,
+              }}
+            >
+              {tab === 'info' ? 'Informações' : 'Formulários'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {activeTab === 'forms' ? (
+        <PatientFormsTab patientId={patient.id} patientName={patient.full_name} />
+      ) : (
+
       <ScrollView
         contentContainerStyle={{
           padding: theme.spacing.md,
@@ -223,7 +293,11 @@ export default function PatientDetailScreen() {
         {/* Profile header */}
         <Card elevated>
           <View style={{ alignItems: 'center', gap: 12 }}>
-            <Avatar name={patient.full_name} size="xl" />
+            <Avatar
+              name={patient.full_name}
+              uri={getPatientAvatarUrl(patient.full_name, patient.gender)}
+              size="xl"
+            />
             <View style={{ alignItems: 'center', gap: 6 }}>
               <Text
                 style={{
@@ -268,11 +342,13 @@ export default function PatientDetailScreen() {
               label="Gênero"
               value={patient.gender ? GENDER_LABEL[patient.gender] : null}
             />
-            <InfoRow
-              icon="card-outline"
-              label="CPF"
-              value={patient.cpf ? formatCpf(patient.cpf) : null}
-            />
+            <InfoRow icon="card-outline" label="CPF" value={patient.cpf ? formatCpf(patient.cpf) : null} />
+            <InfoRow icon="card-outline" label="NIF" value={patient.nif ?? null} />
+            <InfoRow icon="briefcase-outline" label="Profissão" value={patient.profession ?? null} />
+            <InfoRow icon="location-outline" label="Morada" value={patient.address ?? null} />
+            {patient.tutor_name ? (
+              <InfoRow icon="people-outline" label="Responsável" value={patient.tutor_name} />
+            ) : null}
           </Card>
         </View>
 
@@ -427,6 +503,8 @@ export default function PatientDetailScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      )}
 
       {/* Edit modal */}
       <Modal

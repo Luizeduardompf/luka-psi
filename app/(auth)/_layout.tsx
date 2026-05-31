@@ -4,7 +4,8 @@ import { View, ActivityIndicator } from 'react-native'
 import { theme } from '@/constants/theme'
 
 export default function AuthLayout() {
-  const { isAuthenticated, isInitialized } = useSessionStore()
+  const { session, isInitialized } = useSessionStore()
+  const isAuthenticated = !!session
 
   if (!isInitialized) {
     return (
