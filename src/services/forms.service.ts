@@ -33,7 +33,7 @@ const PUBLIC_BASE_URL =
   process.env.EXPO_PUBLIC_APP_URL ?? 'https://app.luka.com.br'
 
 function buildPublicUrl(token: string): string {
-  return `${PUBLIC_BASE_URL}/forms/${token}`
+  return `${PUBLIC_BASE_URL}/f/${token}`
 }
 
 function buildSnapshot(
