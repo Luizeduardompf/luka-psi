@@ -39,23 +39,26 @@ const fontPx: Record<AvatarSize, number> = {
 interface AvatarProps {
   name: string
   uri?: string | null
-  size?: AvatarSize
+  url?: string | null   // alias for uri
+  size?: AvatarSize | number
 }
 
 export const Avatar = memo(function Avatar({
   name,
   uri,
+  url,
   size = 'md',
 }: AvatarProps) {
-  const px = sizePx[size]
-  const fs = fontPx[size]
+  const resolvedUri = uri ?? url ?? null
+  const px = typeof size === 'number' ? size : sizePx[size]
+  const fs = typeof size === 'number' ? Math.round(size * 0.33) : fontPx[size as AvatarSize]
   const bg = nameToColor(name)
   const initials = getInitials(name)
 
-  if (uri) {
+  if (resolvedUri) {
     return (
       <Image
-        source={{ uri }}
+        source={{ uri: resolvedUri }}
         style={{
           width: px,
           height: px,

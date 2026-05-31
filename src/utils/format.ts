@@ -58,9 +58,39 @@ export function maskPhone(value: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
 }
 
+export function maskNif(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 9)
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`
+  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`
+}
+
+export function maskPostalCode(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length <= 5) return digits
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`
+}
+
 export function greetingByHour(): string {
   const h = new Date().getHours()
   if (h < 12) return 'Bom dia'
   if (h < 18) return 'Boa tarde'
   return 'Boa noite'
+}
+
+/** Deterministic portrait URL from randomuser.me based on name hash + gender */
+export function getPatientAvatarUrl(
+  name: string,
+  gender?: string | null,
+): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  const idx = Math.abs(hash) % 70
+  const type =
+    gender === 'F' || gender === 'female' || gender === 'feminino'
+      ? 'women'
+      : 'men'
+  return `https://randomuser.me/api/portraits/${type}/${idx}.jpg`
 }

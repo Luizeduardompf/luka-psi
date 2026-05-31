@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -74,20 +74,12 @@ export default function PatientsListScreen() {
 
   const { data: patients, isLoading, refetch, isFetching } = usePatients({
     status: statusFilter,
+    search: search.trim() || undefined,
   })
 
   const deleteMutation = useDeletePatient()
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return patients ?? []
-    const q = search.toLowerCase().trim()
-    return (patients ?? []).filter(
-      (p) =>
-        p.full_name.toLowerCase().includes(q) ||
-        p.phone?.toLowerCase().includes(q) ||
-        p.email?.toLowerCase().includes(q),
-    )
-  }, [patients, search])
+  const filtered = patients ?? []
 
   const handleDelete = useCallback(
     (patient: Patient) => {
@@ -173,7 +165,7 @@ export default function PatientsListScreen() {
             color={theme.colors.text.tertiary}
           />
           <TextInput
-            placeholder="Buscar por nome, telefone ou e-mail..."
+            placeholder="Buscar por nome, NIF, CPF, tutor..."
             placeholderTextColor={theme.colors.text.tertiary}
             value={search}
             onChangeText={setSearch}
@@ -258,8 +250,6 @@ export default function PatientsListScreen() {
               tintColor={theme.colors.primary}
             />
           }
-          // Long press to delete
-          onLongPress={undefined}
         />
       )}
 

@@ -34,3 +34,6 @@ yarn-error.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Expo Go cache
+.expo-go-cache/

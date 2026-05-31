@@ -9,14 +9,16 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated'
-import { router } from 'expo-router'
+import { router, useIsFocused } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import { useSessionStore } from '@/stores/session.store'
 import { config } from '@/constants/config'
 
 export default function SplashScreen() {
-  const { isAuthenticated, isInitialized } = useSessionStore()
+  const { session, isInitialized } = useSessionStore()
+  const isAuthenticated = !!session
+  const isFocused = useIsFocused()
 
   const opacity = useSharedValue(0)
   const scale = useSharedValue(0.82)
@@ -33,6 +35,7 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const navigate = () => {
+      if (!isFocused) return
       if (isInitialized && isAuthenticated) {
         router.replace('/(app)')
       } else {
@@ -53,13 +56,12 @@ export default function SplashScreen() {
       withTiming(1, { duration: 600 }),
     )
 
-    // Navigate after splash duration
     const timer = setTimeout(() => {
       runOnJS(navigate)()
     }, config.splash.duration)
 
     return () => clearTimeout(timer)
-  }, [isAuthenticated, isInitialized, opacity, scale, taglineOpacity])
+  }, [isAuthenticated, isInitialized, isFocused, opacity, scale, taglineOpacity])
 
   return (
     <LinearGradient
@@ -76,7 +78,7 @@ export default function SplashScreen() {
       </Animated.View>
 
       <Animated.View style={[styles.taglineContainer, taglineStyle]}>
-        <Text style={styles.tagline}>Gestão humanizada para psicólogos</Text>
+        <Text style={styles.tagline}>Gestao humanizada para psicologos</Text>
       </Animated.View>
     </LinearGradient>
   )

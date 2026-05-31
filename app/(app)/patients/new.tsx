@@ -8,32 +8,52 @@ import { theme } from '@/constants/theme'
 import { useCreatePatient } from '@/hooks/usePatients'
 import { PatientSchemaData } from '@/utils/validators'
 
+function schemaToInsert(data: PatientSchemaData) {
+  return {
+    full_name: data.full_name,
+    preferred_name: data.preferred_name || null,
+    email: data.email || null,
+    phone: data.phone || null,
+    cpf: data.cpf || null,
+    nif: data.nif || null,
+    date_of_birth: data.date_of_birth || null,
+    gender: data.gender || null,
+    profession: data.profession || null,
+    education: data.education || null,
+    civil_status_id: data.civil_status_id || null,
+    status: data.status,
+    address: data.address || null,
+    billing_address: data.billing_address || null,
+    postal_code: data.postal_code || null,
+    city: data.city || null,
+    spouse_name: data.spouse_name || null,
+    spouse_phone: data.spouse_phone || null,
+    spouse_email: data.spouse_email || null,
+    tutor_name: data.tutor_name || null,
+    tutor_phone: data.tutor_phone || null,
+    tutor_email: data.tutor_email || null,
+    additional_contacts: data.additional_contacts ?? [],
+    emergency_contact_name: data.emergency_contact_name || null,
+    emergency_contact_phone: data.emergency_contact_phone || null,
+    insurer_id: data.insurer_id || null,
+    plan_id: data.plan_id || null,
+    sns_user_number: data.sns_user_number || null,
+    local_protocol: data.local_protocol || null,
+    consent_rgpd: data.consent_rgpd ?? false,
+    consent_informed: data.consent_informed ?? false,
+    consent_minors: data.consent_minors ?? false,
+    notes: data.notes || null,
+  }
+}
+
 export default function NewPatientScreen() {
   const insets = useSafeAreaInsets()
   const createMutation = useCreatePatient()
 
   const handleSubmit = useCallback(
     async (data: PatientSchemaData) => {
-      const payload = {
-        full_name: data.full_name,
-        email: data.email || null,
-        phone: data.phone || null,
-        cpf: data.cpf || null,
-        date_of_birth: data.date_of_birth || null,
-        gender: (data.gender || null) as
-          | 'male'
-          | 'female'
-          | 'other'
-          | 'prefer_not_to_say'
-          | null,
-        status: data.status,
-        notes: data.notes || null,
-        emergency_contact_name: data.emergency_contact_name || null,
-        emergency_contact_phone: data.emergency_contact_phone || null,
-      }
-
       await new Promise<void>((resolve, reject) => {
-        createMutation.mutate(payload, {
+        createMutation.mutate(schemaToInsert(data), {
           onSuccess: () => {
             resolve()
             router.back()
@@ -56,7 +76,6 @@ export default function NewPatientScreen() {
         paddingTop: insets.top,
       }}
     >
-      {/* Header */}
       <View
         style={{
           flexDirection: 'row',
@@ -73,11 +92,7 @@ export default function NewPatientScreen() {
           onPress={() => router.back()}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons
-            name="arrow-back"
-            size={24}
-            color={theme.colors.text.primary}
-          />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.primary} />
         </TouchableOpacity>
         <Text
           style={{

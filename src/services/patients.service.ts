@@ -24,6 +24,14 @@ export const patientsService = {
         query = query.eq('status', filters.status)
       }
 
+      // Search: name, phone, email, CPF, NIF, tutor name
+      if (filters?.search) {
+        const q = `%${filters.search.toLowerCase()}%`
+        query = query.or(
+          `full_name.ilike.${q},phone.ilike.${q},email.ilike.${q},cpf.ilike.${q},nif.ilike.${q},tutor_name.ilike.${q}`,
+        )
+      }
+
       const { data, error } = await query
       if (error) return { data: null, error: formatSupabaseError(error) }
       return { data: data as Patient[], error: null }
@@ -53,7 +61,7 @@ export const patientsService = {
     try {
       const { data, error } = await supabase
         .from('patients')
-        .insert(patientData)
+        .insert(patientData as never)
         .select()
         .single()
 
@@ -71,7 +79,7 @@ export const patientsService = {
     try {
       const { data, error } = await supabase
         .from('patients')
-        .update(patientData)
+        .update(patientData as never)
         .eq('id', id)
         .select()
         .single()
