@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -9,7 +9,7 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated'
-import { router, useIsFocused } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import { useSessionStore } from '@/stores/session.store'
@@ -18,7 +18,6 @@ import { config } from '@/constants/config'
 export default function SplashScreen() {
   const { session, isInitialized } = useSessionStore()
   const isAuthenticated = !!session
-  const isFocused = useIsFocused()
 
   const opacity = useSharedValue(0)
   const scale = useSharedValue(0.82)
@@ -33,16 +32,8 @@ export default function SplashScreen() {
     opacity: taglineOpacity.value,
   }))
 
+  // Animations — always run on mount
   useEffect(() => {
-    const navigate = () => {
-      if (!isFocused) return
-      if (isInitialized && isAuthenticated) {
-        router.replace('/(app)')
-      } else {
-        router.replace('/(auth)/login')
-      }
-    }
-
     opacity.value = withTiming(1, {
       duration: 700,
       easing: Easing.out(Easing.cubic),
@@ -55,13 +46,24 @@ export default function SplashScreen() {
       500,
       withTiming(1, { duration: 600 }),
     )
+  }, [opacity, scale, taglineOpacity])
 
-    const timer = setTimeout(() => {
-      runOnJS(navigate)()
-    }, config.splash.duration)
+  // Navigation — only when this screen is focused (skips when deep-linked)
+  useFocusEffect(
+    useCallback(() => {
+      if (!isInitialized) return
 
-    return () => clearTimeout(timer)
-  }, [isAuthenticated, isInitialized, isFocused, opacity, scale, taglineOpacity])
+      const timer = setTimeout(() => {
+        if (isAuthenticated) {
+          router.replace('/(app)')
+        } else {
+          router.replace('/(auth)/login')
+        }
+      }, config.splash.duration)
+
+      return () => clearTimeout(timer)
+    }, [isAuthenticated, isInitialized]),
+  )
 
   return (
     <LinearGradient
@@ -78,7 +80,7 @@ export default function SplashScreen() {
       </Animated.View>
 
       <Animated.View style={[styles.taglineContainer, taglineStyle]}>
-        <Text style={styles.tagline}>Gestao humanizada para psicologos</Text>
+        <Text style={styles.tagline}>Gestão humanizada para psicólogos</Text>
       </Animated.View>
     </LinearGradient>
   )
