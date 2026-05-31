@@ -29,7 +29,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   } = useSessionStore()
 
   useEffect(() => {
-    // Hydrate session on mount
     void supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
@@ -46,7 +45,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       }
     })
 
-    // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session)
@@ -83,6 +81,7 @@ export default function RootLayout() {
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(app)" />
               <Stack.Screen name="forms" />
+              <Stack.Screen name="f" />
             </Stack>
           </AuthGuard>
         </QueryClientProvider>
