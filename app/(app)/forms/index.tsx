@@ -118,10 +118,8 @@ export default function FormsLibraryScreen() {
       style={{ marginBottom: 10 }}
     >
       <TouchableOpacity
-        onPress={() =>
-          allowEdit ? router.push(`/(app)/forms/${template.id}`) : undefined
-        }
-        activeOpacity={allowEdit ? 0.7 : 1}
+        onPress={() => router.push(`/(app)/forms/${template.id}`)}
+        activeOpacity={0.7}
       >
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
           <View
@@ -213,32 +211,17 @@ export default function FormsLibraryScreen() {
             loading={cloneMutation.isPending}
           />
           <Button
-            title="Entrar"
-            variant="ghost"
-            size="sm"
-            leftIcon={<Ionicons name="eye-outline" size={14} color={theme.colors.primary} />}
-            onPress={() => router.push(`/(app)/forms/${template.id}`)}
-          />
-          <Button
             title="Preview"
             variant="ghost"
             size="sm"
             leftIcon={<Ionicons name="open-outline" size={14} color={theme.colors.secondary} />}
             onPress={() => {
               const url = formsService.buildPublicUrl(`preview-${template.id}`)
-              // Abre a URL de preview no browser; na web usa window.open
               void Linking.openURL(url)
             }}
           />
           {allowEdit && (
             <>
-              <Button
-                title="Editar"
-                variant="ghost"
-                size="sm"
-                leftIcon={<Ionicons name="pencil-outline" size={14} color={theme.colors.text.secondary} />}
-                onPress={() => router.push(`/(app)/forms/${template.id}`)}
-              />
               <View style={{ flex: 1 }} />
               <TouchableOpacity
                 onPress={() => handleDelete(template)}

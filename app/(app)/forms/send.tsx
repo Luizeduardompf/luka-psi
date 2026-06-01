@@ -83,13 +83,40 @@ export default function SendFormScreen() {
   const [addExtraQuestionTitle, setAddExtraQuestionTitle] = useState('')
   const [addExtraQuestionType, setAddExtraQuestionType] = useState<QuestionType>('short_text')
   const [editingExtraSection, setEditingExtraSection] = useState<number | null>(null)
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
+  const [expiryDateError, setExpiryDateError] = useState('')
+
+  const validateExpiryDate = (d: string): string => {
+    if (!d.trim()) return ''
+    const parts = d.split('/')
+    if (parts.length !== 3 || parts[0].length !== 2 || parts[1].length !== 2 || parts[2].length !== 4) {
+      return 'Formato inválido. Use DD/MM/AAAA.'
+    }
+    const [dd, mm, yyyy] = parts.map(Number)
+    if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return 'Data inválida.'
+    const parsed = new Date(yyyy, mm - 1, dd)
+    if (parsed.getMonth() !== mm - 1 || parsed.getDate() !== dd) return 'Data inválida.'
+    if (parsed <= new Date()) return 'O prazo deve ser uma data futura.'
+    return ''
+  }
+
+  const handleExpiryChange = (v: string) => {
+    // Auto-mask: insert '/' at positions 2 and 5
+    const digits = v.replace(/\D/g, '').slice(0, 8)
+    let masked = digits
+    if (digits.length > 2) masked = digits.slice(0, 2) + '/' + digits.slice(2)
+    if (digits.length > 4) masked = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4)
+    setExpiryDate(masked)
+    if (masked.length === 10) setExpiryDateError(validateExpiryDate(masked))
+    else setExpiryDateError('')
+  }
 
   const canAdvance = (): boolean => {
     switch (step) {
       case 1: return !!selectedTemplate
       case 2: return true
       case 3: return password.trim().length >= 4
-      case 4: return !hasExpiry || !!expiryDate.trim()
+      case 4: return !hasExpiry || (expiryDate.length === 10 && !validateExpiryDate(expiryDate))
       case 5: return !!customMessage.trim()
       case 6: return true
       case 7: return true
@@ -339,48 +366,64 @@ export default function SendFormScreen() {
                     placeholder="Título da pergunta"
                     placeholderTextColor={theme.colors.text.tertiary}
                   />
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={{ marginVertical: 4 }}
-                  >
-                    {(['short_text', 'long_text', 'single_choice', 'boolean', 'scale', 'date'] as QuestionType[]).map(
-                      (t) => (
-                        <TouchableOpacity
-                          key={t}
-                          onPress={() => setAddExtraQuestionType(t)}
-                          style={{
-                            paddingHorizontal: 12,
-                            paddingVertical: 6,
-                            borderRadius: 99,
-                            borderWidth: 1.5,
-                            borderColor:
-                              addExtraQuestionType === t
-                                ? theme.colors.primary
-                                : theme.colors.border,
-                            backgroundColor:
-                              addExtraQuestionType === t
-                                ? theme.colors.primaryLight
-                                : theme.colors.surface,
-                            marginRight: 8,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontSize: 12,
-                              fontWeight: '600',
-                              color:
-                                addExtraQuestionType === t
-                                  ? theme.colors.primary
-                                  : theme.colors.text.secondary,
-                            }}
-                          >
-                            {QUESTION_TYPE_LABELS[t]}
-                          </Text>
-                        </TouchableOpacity>
-                      ),
+                  <View>
+                    <Text style={sectionLabel}>Tipo de campo</Text>
+                    <TouchableOpacity
+                      onPress={() => setTypeDropdownOpen((v) => !v)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderWidth: 1,
+                        borderColor: typeDropdownOpen ? theme.colors.primary : '#E5E7EB',
+                        borderRadius: 10,
+                        paddingVertical: 12,
+                        paddingHorizontal: 14,
+                        backgroundColor: '#F9FAFB',
+                      }}
+                    >
+                      <Text style={{ fontSize: 15, color: '#111827', fontWeight: '500' }}>
+                        {QUESTION_TYPE_LABELS[addExtraQuestionType]}
+                      </Text>
+                      <Ionicons
+                        name={typeDropdownOpen ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color={theme.colors.text.secondary}
+                      />
+                    </TouchableOpacity>
+                    {typeDropdownOpen && (
+                      <View style={{
+                        borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10,
+                        backgroundColor: theme.colors.surface, marginTop: 4, overflow: 'hidden',
+                      }}>
+                        {(['short_text', 'long_text', 'single_choice', 'multi_choice', 'dropdown', 'boolean', 'scale', 'date', 'number'] as QuestionType[]).map(
+                          (t, idx, arr) => (
+                            <TouchableOpacity
+                              key={t}
+                              onPress={() => { setAddExtraQuestionType(t); setTypeDropdownOpen(false) }}
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                paddingVertical: 12,
+                                paddingHorizontal: 14,
+                                backgroundColor: addExtraQuestionType === t ? theme.colors.primaryLight : 'transparent',
+                                borderBottomWidth: idx < arr.length - 1 ? 1 : 0,
+                                borderBottomColor: '#F3F4F6',
+                              }}
+                            >
+                              <Text style={{ fontSize: 14, color: addExtraQuestionType === t ? theme.colors.primary : theme.colors.text.primary, fontWeight: addExtraQuestionType === t ? '600' : '400' }}>
+                                {QUESTION_TYPE_LABELS[t]}
+                              </Text>
+                              {addExtraQuestionType === t && (
+                                <Ionicons name="checkmark" size={16} color={theme.colors.primary} />
+                              )}
+                            </TouchableOpacity>
+                          ),
+                        )}
+                      </View>
                     )}
-                  </ScrollView>
+                  </View>
                   <View style={{ flexDirection: 'row', gap: 12 }}>
                     <Button
                       title="Cancelar"
@@ -471,15 +514,22 @@ export default function SendFormScreen() {
                 <Text style={sectionLabel}>Data limite (DD/MM/AAAA)</Text>
                 <TextInput
                   value={expiryDate}
-                  onChangeText={setExpiryDate}
-                  style={inputStyle}
+                  onChangeText={handleExpiryChange}
+                  style={[inputStyle, expiryDateError ? { borderColor: theme.colors.error } : {}]}
                   placeholder="Ex: 15/06/2026"
                   placeholderTextColor={theme.colors.text.tertiary}
-                  keyboardType="numbers-and-punctuation"
+                  keyboardType="number-pad"
+                  maxLength={10}
                 />
-                <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginTop: 4 }}>
-                  Após esta data, o formulário será bloqueado automaticamente.
-                </Text>
+                {expiryDateError ? (
+                  <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: 4 }}>
+                    {expiryDateError}
+                  </Text>
+                ) : (
+                  <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginTop: 4 }}>
+                    Após esta data, o formulário será bloqueado automaticamente.
+                  </Text>
+                )}
               </View>
             )}
           </View>

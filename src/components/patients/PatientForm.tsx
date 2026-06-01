@@ -282,6 +282,7 @@ export const PatientForm = memo(function PatientForm({
       // Contact
       email: initialData?.email ?? '',
       phone: initialData?.phone ?? '',
+      phone_ddi: (initialData as any)?.phone_ddi ?? '',
 
       // Documents
       cpf: initialData?.cpf ?? '',
@@ -448,17 +449,20 @@ export const PatientForm = memo(function PatientForm({
             )}
           />
 
-          {/* Gender */}
-          <View style={{ marginBottom: theme.spacing.md }}>
-            <Text style={labelStyle}>Género</Text>
-            <Controller
-              control={control}
-              name="gender"
-              render={({ field: { onChange, value } }) => (
-                <ChipSelector options={GENDER_OPTIONS} value={value ?? ''} onChange={onChange} />
-              )}
-            />
-          </View>
+          {/* Gender — dropdown */}
+          <Controller
+            control={control}
+            name="gender"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="Género / Sexo"
+                options={GENDER_OPTIONS}
+                value={value ?? ''}
+                onChange={onChange}
+                placeholder="Selecionar género..."
+              />
+            )}
+          />
 
           <Controller
             control={control}
@@ -572,22 +576,43 @@ export const PatientForm = memo(function PatientForm({
             )}
           />
 
-          <Controller
-            control={control}
-            name="phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Telefone"
-                placeholder="(11) 99999-9999"
-                leftIcon="call-outline"
-                keyboardType="phone-pad"
-                onChangeText={(v) => onChange(maskPhone(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.phone?.message}
+          {/* Phone + DDI */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ width: 90 }}>
+              <Controller
+                control={control}
+                name="phone_ddi"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    label="DDI"
+                    placeholder="+351"
+                    keyboardType="phone-pad"
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                    value={value ?? ''}
+                  />
+                )}
               />
-            )}
-          />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <Input
+                    label="Telefone"
+                    placeholder="912 345 678"
+                    leftIcon="call-outline"
+                    keyboardType="phone-pad"
+                    onChangeText={(v) => onChange(maskPhone(v))}
+                    onBlur={onBlur}
+                    value={value ?? ''}
+                    error={errors.phone?.message}
+                  />
+                )}
+              />
+            </View>
+          </View>
         </Card>
 
         {/* ── DOCUMENTOS ── */}

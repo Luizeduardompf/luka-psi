@@ -114,6 +114,7 @@ export const patientSchema = z
     // Contact
     email: z.string().email('E-mail inválido').optional().or(z.literal('')),
     phone: z.string().optional().or(z.literal('')),
+    phone_ddi: z.string().optional().or(z.literal('')),
 
     // Documents — at least one required
     cpf: z

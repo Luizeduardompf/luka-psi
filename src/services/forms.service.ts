@@ -27,10 +27,8 @@ import {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // URL pública acessível pelo paciente via browser
-// Em produção: https://app.luka.com.br/forms/<token>
-// Em desenvolvimento: deep link luka://forms/<token>
 const PUBLIC_BASE_URL =
-  process.env.EXPO_PUBLIC_APP_URL ?? 'https://app.luka.com.br'
+  process.env.EXPO_PUBLIC_APP_URL ?? 'https://luka-psi-mocha.vercel.app'
 
 function buildPublicUrl(token: string): string {
   return `${PUBLIC_BASE_URL}/f/${token}`

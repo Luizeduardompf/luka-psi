@@ -82,10 +82,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Configurações',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
+          href: null, // Removido do tab bar — acessível via ícone na tela Início
         }}
       />
     </Tabs>

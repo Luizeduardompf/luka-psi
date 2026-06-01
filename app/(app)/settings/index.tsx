@@ -231,6 +231,43 @@ export default function SettingsScreen() {
             value="Ver seguradoras disponíveis"
             onPress={() => router.push('/(app)/settings/insurers')}
           />
+          <SettingsRow
+            icon="transgender-outline"
+            label="Géneros / Sexo"
+            value="Gerir géneros e terminologia"
+            onPress={() => router.push('/(app)/settings/genders')}
+          />
+          <SettingsRow
+            icon="globe-outline"
+            label="Países"
+            value="Gerir países e DDI"
+            onPress={() => router.push('/(app)/settings/countries')}
+          />
+          <SettingsRow
+            icon="business-outline"
+            label="Locais de prática"
+            value="Consultórios e clínicas"
+            onPress={() => router.push('/(app)/settings/practice-locations')}
+          />
+        </View>
+
+        {/* Configurações da conta */}
+        <SectionTitle title="Configurações da conta" />
+        <View
+          style={{
+            marginHorizontal: theme.spacing.md,
+            borderRadius: theme.radius.lg,
+            overflow: 'hidden',
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+          }}
+        >
+          <SettingsRow
+            icon="people-outline"
+            label="Terminologia de pacientes"
+            value={`"${profile?.patient_terminology ?? 'Paciente'}" — toque para alterar`}
+            onPress={() => router.push('/(app)/settings/terminology')}
+          />
         </View>
 
         {/* Conta */}

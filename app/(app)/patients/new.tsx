@@ -14,6 +14,7 @@ function schemaToInsert(data: PatientSchemaData) {
     preferred_name: data.preferred_name || null,
     email: data.email || null,
     phone: data.phone || null,
+    phone_ddi: data.phone_ddi || null,
     cpf: data.cpf || null,
     nif: data.nif || null,
     date_of_birth: data.date_of_birth || null,

@@ -173,27 +173,43 @@ export default function DashboardScreen() {
             justifyContent: 'space-between',
           }}
         >
-          <View>
-            <Text
-              style={{
-                fontSize: 14,
-                color: theme.colors.text.secondary,
-              }}
-            >
-              {greetingByHour()},
-            </Text>
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: '700',
-                color: theme.colors.text.primary,
-                letterSpacing: -0.5,
-              }}
-            >
-              {firstName}! 👋
-            </Text>
+          {/* Left: avatar + greeting */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+            <Avatar name={displayName} uri={profile?.avatar_url} size="lg" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: theme.colors.text.secondary }}>
+                {greetingByHour()},
+              </Text>
+              <Text style={{
+                fontSize: 20, fontWeight: '700',
+                color: theme.colors.text.primary, letterSpacing: -0.3,
+              }}>
+                {firstName}! 👋
+              </Text>
+            </View>
           </View>
-          <Avatar name={displayName} uri={profile?.avatar_url} size="lg" />
+          {/* Right: notification + settings */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <TouchableOpacity
+              style={{
+                width: 40, height: 40, borderRadius: 20,
+                alignItems: 'center', justifyContent: 'center',
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/(app)/settings')}
+              style={{
+                width: 40, height: 40, borderRadius: 20,
+                alignItems: 'center', justifyContent: 'center',
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="settings-outline" size={24} color={theme.colors.text.primary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats */}
