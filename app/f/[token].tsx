@@ -2,6 +2,8 @@
  * Pagina publica de preenchimento de formulario pelo paciente.
  * Rota: /f/:token
  * Sem autenticacao. Controlada por senha + expiracao + status.
+ *
+ * Token especial: "preview-{templateId}" → modo leitura (preview para psicologo).
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
@@ -29,9 +31,18 @@ import {
   FormResponse,
   SnapshotSection,
   SnapshotQuestion,
+  FormQuestionOption,
 } from '@/types/forms.types'
 
-type PageState = 'loading' | 'auth' | 'filling' | 'completed' | 'expired' | 'not_found' | 'already_done'
+type PageState = 'loading' | 'auth' | 'filling' | 'preview' | 'completed' | 'expired' | 'not_found' | 'already_done'
+
+// Snapshot sintético para o modo preview
+interface PreviewSnapshot {
+  template_title: string
+  template_description: string | null
+  sections: SnapshotSection[]
+  questions: SnapshotQuestion[]
+}
 
 export default function PublicFormPage() {
   const { token } = useLocalSearchParams<{ token: string }>()
@@ -43,6 +54,7 @@ export default function PublicFormPage() {
     full_name: string
     logo_url: string | null
   } | null>(null)
+  const [previewSnap, setPreviewSnap] = useState<PreviewSnapshot | null>(null)
 
   // Auth
   const [passwordInput, setPasswordInput] = useState('')
@@ -62,9 +74,61 @@ export default function PublicFormPage() {
       setPageState('not_found')
       return
     }
+
+    // Modo preview: token = "preview-{templateId}"
+    if (token.startsWith('preview-')) {
+      const templateId = token.slice('preview-'.length)
+      void loadPreview(templateId)
+      return
+    }
+
     void loadSubmission()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
+
+  async function loadPreview(templateId: string) {
+    setPageState('loading')
+    const result = await formsService.getTemplatePreview(templateId)
+
+    if (result.error || !result.data) {
+      setPageState('not_found')
+      return
+    }
+
+    const { template, sections, questions, options } = result.data as {
+      template: { title: string; description: string | null }
+      sections: Array<{ id: string; title: string; description: string | null; sort_order: number }>
+      questions: Array<{
+        id: string
+        section_id: string | null
+        type: string
+        title: string
+        description: string | null
+        help_text: string | null
+        is_required: boolean
+        sort_order: number
+        scale_min: number
+        scale_max: number
+        scale_step: number
+      }>
+      options: FormQuestionOption[]
+    }
+
+    // Mapear opções às perguntas
+    const snapshotQuestions: SnapshotQuestion[] = questions.map((q) => ({
+      ...q,
+      type: q.type as SnapshotQuestion['type'],
+      options: options.filter((o) => o.question_id === q.id).sort((a, b) => a.sort_order - b.sort_order),
+    }))
+
+    setPreviewSnap({
+      template_title: template.title,
+      template_description: template.description,
+      sections: sections.sort((a, b) => a.sort_order - b.sort_order),
+      questions: snapshotQuestions,
+    })
+    setPageState('preview')
+  }
 
   async function loadSubmission() {
     setPageState('loading')
@@ -202,6 +266,8 @@ export default function PublicFormPage() {
     setIsSubmitting(false)
   }
 
+  // ─── Render states ───────────────────────────────────────────────────────────
+
   if (pageState === 'loading') {
     return (
       <View style={centeredContainer}>
@@ -256,6 +322,165 @@ export default function PublicFormPage() {
       />
     )
   }
+
+  // ─── Modo Preview ────────────────────────────────────────────────────────────
+
+  if (pageState === 'preview' && previewSnap) {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: theme.colors.background }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* Banner de preview */}
+        <View
+          style={{
+            backgroundColor: '#FEF3C7',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            paddingTop: insets.top + 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Ionicons name="eye-outline" size={16} color="#D97706" />
+          <Text style={{ fontSize: 13, color: '#D97706', fontWeight: '600', flex: 1 }}>
+            MODO PREVIEW — visualização do formulário como o paciente verá
+          </Text>
+          {router.canGoBack() && (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="close" size={20} color="#D97706" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Cabeçalho */}
+          <Text
+            style={{
+              fontSize: 22,
+              fontWeight: '700',
+              color: theme.colors.text.primary,
+              marginBottom: 6,
+            }}
+          >
+            {previewSnap.template_title}
+          </Text>
+          {previewSnap.template_description ? (
+            <Text
+              style={{
+                fontSize: 14,
+                color: theme.colors.text.secondary,
+                marginBottom: 20,
+                lineHeight: 20,
+              }}
+            >
+              {previewSnap.template_description}
+            </Text>
+          ) : (
+            <View style={{ height: 20 }} />
+          )}
+
+          {/* Seções e perguntas */}
+          {previewSnap.sections.map((section) => {
+            const sectionQuestions = previewSnap.questions
+              .filter((q) => q.section_id === section.id)
+              .sort((a, b) => a.sort_order - b.sort_order)
+
+            if (sectionQuestions.length === 0) return null
+
+            return (
+              <View key={section.id} style={{ marginBottom: 28 }}>
+                {section.title ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '700',
+                        color: theme.colors.primary,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.6,
+                      }}
+                    >
+                      {section.title}
+                    </Text>
+                    <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
+                  </View>
+                ) : null}
+                {sectionQuestions.map((q) => (
+                  <View
+                    key={q.id}
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      borderRadius: theme.radius.md,
+                      padding: 16,
+                      marginBottom: 12,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      opacity: 0.85,
+                    }}
+                  >
+                    <QuestionRenderer
+                      question={q}
+                      response={null}
+                      onChange={() => {/* read-only no preview */}}
+                    />
+                  </View>
+                ))}
+              </View>
+            )
+          })}
+
+          {/* Perguntas sem seção */}
+          {previewSnap.questions
+            .filter((q) => !q.section_id)
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((q) => (
+              <View
+                key={q.id}
+                style={{
+                  backgroundColor: theme.colors.surface,
+                  borderRadius: theme.radius.md,
+                  padding: 16,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  opacity: 0.85,
+                }}
+              >
+                <QuestionRenderer
+                  question={q}
+                  response={null}
+                  onChange={() => {/* read-only */}}
+                />
+              </View>
+            ))}
+
+          {/* Botão fake desabilitado */}
+          <View style={{ marginTop: 8, opacity: 0.4 }}>
+            <Button
+              title="Concluir e enviar (desabilitado no preview)"
+              fullWidth
+              disabled
+            />
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    )
+  }
+
+  // ─── Autenticação ────────────────────────────────────────────────────────────
 
   if (pageState === 'auth') {
     const snap = submission?.snapshot
@@ -407,6 +632,8 @@ export default function PublicFormPage() {
       </KeyboardAvoidingView>
     )
   }
+
+  // ─── Preenchimento ───────────────────────────────────────────────────────────
 
   if (pageState === 'filling' && submission) {
     const snap = submission.snapshot
@@ -570,6 +797,8 @@ export default function PublicFormPage() {
   return null
 }
 
+// ─── Componentes auxiliares ──────────────────────────────────────────────────
+
 function StateScreen({
   icon,
   iconColor,
@@ -655,4 +884,4 @@ const fieldLabel = {
   marginBottom: 8,
   textTransform: 'uppercase' as const,
   letterSpacing: 0.4,
-                    }
+}

@@ -259,11 +259,12 @@ export const SUBMISSION_STATUS_COLORS: Record<SubmissionStatus, string> = {
 
 export const DEFAULT_SEND_MESSAGE = `Olá <<nome_paciente>>, tudo bem?
 
-Seu(sua) psicólogo(a) enviou um formulário para você preencher.
+<<nome_psicologo>> enviou um formulário para você preencher.
 
 📋 Formulário: <<nome_formulario>>
 🔗 Link de acesso: <<link>>
 🔑 Senha: <<senha>>
+📅 Prazo: <<data_limite>>
 
 Preencha com calma e honestidade. Suas respostas são confidenciais.`
 

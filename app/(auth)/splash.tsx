@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useEffect } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import Animated, {
   useSharedValue,
@@ -18,10 +18,9 @@ import { config } from '@/constants/config'
 export default function SplashScreen() {
   const { session, isInitialized } = useSessionStore()
   const isAuthenticated = !!session
-  // usePathname returns the current URL path (browser URL on web).
-  // If the user deep-linked to /forms/[token], this will be /forms/...
-  // and we must NOT redirect — let the public route render.
   const pathname = usePathname()
+  // Não redirecionar quando estiver em rota pública de formulários
+  const isFocused = !pathname.startsWith('/f')
 
   const opacity = useSharedValue(0)
   const scale = useSharedValue(0.82)
@@ -38,15 +37,12 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const navigate = () => {
-      // Skip navigation if the active URL is a public route (deep link).
-      // On web SPA, usePathname returns the current browser URL regardless
-      // of which component calls it, so this guard works even when splash
-      // is background-mounted.
-      if (pathname.startsWith('/forms')) return
-
+      // Skip navigation if this screen is mounted in the background
+      // (e.g. when deep-linking directly to /forms/[token])
+      if (!isFocused) return
       if (isInitialized && isAuthenticated) {
         router.replace('/(app)')
-      } else if (isInitialized) {
+      } else {
         router.replace('/(auth)/login')
       }
     }
@@ -64,12 +60,13 @@ export default function SplashScreen() {
       withTiming(1, { duration: 600 }),
     )
 
+    // Navigate after splash duration
     const timer = setTimeout(() => {
       runOnJS(navigate)()
     }, config.splash.duration)
 
     return () => clearTimeout(timer)
-  }, [isAuthenticated, isInitialized, pathname, opacity, scale, taglineOpacity])
+  }, [isAuthenticated, isInitialized, isFocused, opacity, scale, taglineOpacity])
 
   return (
     <LinearGradient
@@ -86,7 +83,7 @@ export default function SplashScreen() {
       </Animated.View>
 
       <Animated.View style={[styles.taglineContainer, taglineStyle]}>
-        <Text style={styles.tagline}>Gestao humanizada para psicologos</Text>
+        <Text style={styles.tagline}>Gestão humanizada para psicólogos</Text>
       </Animated.View>
     </LinearGradient>
   )

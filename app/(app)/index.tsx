@@ -141,7 +141,9 @@ export default function DashboardScreen() {
     void recentPatients.refetch()
   }, [allPatients, activePatients, recentPatients])
 
-  const firstName = displayName.split(' ')[0] ?? displayName
+  // Usa preferred_name se disponível, evitando exibir títulos como "Dr." do full_name
+  const displayNameForGreeting = profile?.preferred_name ?? displayName
+  const firstName = displayNameForGreeting.split(' ')[0] ?? displayNameForGreeting
 
   return (
     <View

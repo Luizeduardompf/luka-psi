@@ -1,4 +1,4 @@
-import { Tabs, Redirect, useSegments } from 'expo-router'
+import { Tabs, Redirect } from 'expo-router'
 import { View, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useSessionStore } from '@/stores/session.store'
@@ -7,11 +7,6 @@ import { theme } from '@/constants/theme'
 export default function AppLayout() {
   const { session, profile, isInitialized } = useSessionStore()
   const isAuthenticated = !!session
-  // useSegments returns the active URL segments.
-  // When deep-linking to /forms/[token], segments[0] = 'forms' (not '(app)'),
-  // so we skip the auth redirect and let the public route render.
-  const segments = useSegments()
-  const isInAppGroup = segments[0] === '(app)'
 
   if (!isInitialized) {
     return (
@@ -28,13 +23,8 @@ export default function AppLayout() {
     )
   }
 
-  if (!isAuthenticated && isInAppGroup) {
-    return <Redirect href="/(auth)/splash" />
-  }
-
   if (!isAuthenticated) {
-    // Background-mounted for a public route — render nothing
-    return null
+    return <Redirect href="/(auth)/splash" />
   }
 
   // First login: redirect to onboarding
@@ -65,7 +55,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Inicio',
+          title: 'Início',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -83,7 +73,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="forms"
         options={{
-          title: 'Formularios',
+          title: 'Formulários',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text-outline" size={size} color={color} />
           ),
@@ -92,7 +82,7 @@ export default function AppLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Configuracoes',
+          title: 'Configurações',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
           ),

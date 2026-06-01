@@ -14,7 +14,9 @@ import {
   Modal,
 } from 'react-native'
 import { router } from 'expo-router'
+import { Linking } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { formsService } from '@/services/forms.service'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { theme } from '@/constants/theme'
 import { Card } from '@/components/ui/Card'
@@ -199,6 +201,7 @@ export default function FormsLibraryScreen() {
             paddingTop: 12,
             borderTopWidth: 1,
             borderTopColor: theme.colors.border,
+            flexWrap: 'wrap',
           }}
         >
           <Button
@@ -209,13 +212,31 @@ export default function FormsLibraryScreen() {
             onPress={() => handleClone(template)}
             loading={cloneMutation.isPending}
           />
+          <Button
+            title="Entrar"
+            variant="ghost"
+            size="sm"
+            leftIcon={<Ionicons name="eye-outline" size={14} color={theme.colors.primary} />}
+            onPress={() => router.push(`/(app)/forms/${template.id}`)}
+          />
+          <Button
+            title="Preview"
+            variant="ghost"
+            size="sm"
+            leftIcon={<Ionicons name="open-outline" size={14} color={theme.colors.secondary} />}
+            onPress={() => {
+              const url = formsService.buildPublicUrl(`preview-${template.id}`)
+              // Abre a URL de preview no browser; na web usa window.open
+              void Linking.openURL(url)
+            }}
+          />
           {allowEdit && (
             <>
               <Button
                 title="Editar"
                 variant="ghost"
                 size="sm"
-                leftIcon={<Ionicons name="pencil-outline" size={14} color={theme.colors.primary} />}
+                leftIcon={<Ionicons name="pencil-outline" size={14} color={theme.colors.text.secondary} />}
                 onPress={() => router.push(`/(app)/forms/${template.id}`)}
               />
               <View style={{ flex: 1 }} />

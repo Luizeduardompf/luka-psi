@@ -9,11 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      genders: {
+        Row: {
+          id: string
+          name: string
+          pronoun_treatment: string
+          sort_order: number
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          pronoun_treatment?: string
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          pronoun_treatment?: string
+          sort_order?: number
+          is_active?: boolean
+          created_at?: string
+        }
+      }
       profiles: {
         Row: {
           id: string
           full_name: string
           preferred_name: string | null
+          commercial_name: string | null
+          gender_id: string | null
           crp: string | null
           ordem_psicologos: string | null
           phone: string | null
@@ -32,6 +60,8 @@ export type Database = {
           id: string
           full_name: string
           preferred_name?: string | null
+          commercial_name?: string | null
+          gender_id?: string | null
           crp?: string | null
           ordem_psicologos?: string | null
           phone?: string | null
@@ -50,6 +80,8 @@ export type Database = {
           id?: string
           full_name?: string
           preferred_name?: string | null
+          commercial_name?: string | null
+          gender_id?: string | null
           crp?: string | null
           ordem_psicologos?: string | null
           phone?: string | null
@@ -77,6 +109,7 @@ export type Database = {
           nif: string | null
           date_of_birth: string | null
           gender: string | null
+          gender_id: string | null
           profession: string | null
           education: string | null
           civil_status_id: string | null
@@ -116,6 +149,7 @@ export type Database = {
           nif?: string | null
           date_of_birth?: string | null
           gender?: string | null
+          gender_id?: string | null
           profession?: string | null
           education?: string | null
           civil_status_id?: string | null
@@ -155,6 +189,7 @@ export type Database = {
           nif?: string | null
           date_of_birth?: string | null
           gender?: string | null
+          gender_id?: string | null
           profession?: string | null
           education?: string | null
           civil_status_id?: string | null
