@@ -18,7 +18,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native'
-import { useLocalSearchParams, router } from 'expo-router'
+import { useLocalSearchParams, router, usePathname } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { theme } from '@/constants/theme'
@@ -45,7 +45,20 @@ interface PreviewSnapshot {
 }
 
 export default function PublicFormPage() {
-  const { token } = useLocalSearchParams<{ token: string }>()
+  const { token: routerToken } = useLocalSearchParams<{ token: string }>()
+  const pathname = usePathname()
+
+  // Fallback: no Expo Router SPA export, useLocalSearchParams pode retornar undefined
+  // no carregamento inicial via URL direta. Extraímos o token do pathname como fallback.
+  const webFallbackToken = Platform.OS === 'web'
+    ? (() => {
+        const parts = pathname.split('/')
+        const last = parts[parts.length - 1]
+        return last && last.length > 0 ? last : undefined
+      })()
+    : undefined
+  const token = routerToken ?? webFallbackToken
+
   const insets = useSafeAreaInsets()
 
   const [pageState, setPageState] = useState<PageState>('loading')
