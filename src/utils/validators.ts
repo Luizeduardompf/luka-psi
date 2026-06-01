@@ -79,6 +79,7 @@ export const profileSchema = z.object({
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo'),
   preferred_name: z.string().optional().or(z.literal('')),
+  commercial_name: z.string().optional().or(z.literal('')),
   ordem_psicologos: z.string().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),

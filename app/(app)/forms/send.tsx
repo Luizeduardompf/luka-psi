@@ -13,8 +13,8 @@ import {
   ActivityIndicator,
   Modal,
   Switch,
-  Clipboard,
   Linking,
+  Clipboard,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -25,6 +25,7 @@ import { Card } from '@/components/ui/Card'
 import { useFormTemplates, useSendForm } from '@/hooks/useForms'
 import { usePatient } from '@/hooks/usePatients'
 import { useSessionStore } from '@/stores/session.store'
+import { useGenders, getPronounTreatment } from '@/hooks/useGenders'
 import {
   FormTemplate,
   SendFormInput,
@@ -54,7 +55,12 @@ export default function SendFormScreen() {
 
   const { data: patient } = usePatient(patientId ?? '')
   const { data: templates = [], isLoading: templatesLoading } = useFormTemplates()
+  const { data: genders } = useGenders()
   const sendFormMutation = useSendForm()
+
+  // Tratamento Dr./Dra. baseado no gênero do psicólogo
+  const pronoun = getPronounTreatment(genders, profile?.gender_id)
+  const psicologoDisplayName = `${pronoun} ${profile?.commercial_name ?? profile?.preferred_name ?? profile?.full_name ?? ''}`
 
   const [step, setStep] = useState<Step>(1)
   const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null)
@@ -101,15 +107,17 @@ export default function SendFormScreen() {
       }
     }
 
-    // Token será gerado pelo banco; usamos placeholder indicativo na mensagem salva
+    // Token será gerado pelo banco; substituímos após receber o token real
+    const dataLimiteStr = hasExpiry && expiryDate ? expiryDate : 'Sem prazo definido'
     const tokenPlaceholder = '[link gerado pelo sistema]'
     const interpolated = customMessage
       .replace(/<<nome_paciente>>/g, patient?.full_name ?? '')
       .replace(/<<nome_formulario>>/g, selectedTemplate.title)
       .replace(/<<senha>>/g, password)
       .replace(/<<link>>/g, tokenPlaceholder)
+      .replace(/<<data_limite>>/g, dataLimiteStr)
       // Suporte a placeholders legados
-      .replace(/<<nome_psicologo>>/g, profile.full_name ?? '')
+      .replace(/<<nome_psicologo>>/g, psicologoDisplayName)
       .replace(/<<senha_acesso>>/g, password)
       .replace(/<<link_formulario>>/g, tokenPlaceholder)
 
@@ -481,17 +489,11 @@ export default function SendFormScreen() {
         return (
           <View style={{ gap: 12 }}>
             <Text style={{ fontSize: 14, color: theme.colors.text.secondary, lineHeight: 20 }}>
-              Esta mensagem será exibida ao paciente ao acessar o formulário.
-              {'\n'}Você pode usar os placeholders abaixo.
+              Esta mensagem será enviada ao paciente junto com o link.
+              {'\n'}Use os placeholders abaixo — eles serão substituídos automaticamente.
             </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                flexWrap: 'wrap',
-                gap: 6,
-              }}
-            >
-              {['<<nome_paciente>>', '<<nome_formulario>>', '<<senha>>', '<<link>>'].map(
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {['<<nome_paciente>>', '<<nome_formulario>>', '<<nome_psicologo>>', '<<senha>>', '<<link>>', '<<data_limite>>'].map(
                 (p) => (
                   <View
                     key={p}
@@ -512,97 +514,14 @@ export default function SendFormScreen() {
             <TextInput
               value={customMessage}
               onChangeText={setCustomMessage}
-              style={[inputStyle, { minHeight: 180, textAlignVertical: 'top' }]}
+              style={[inputStyle, { minHeight: 200, textAlignVertical: 'top' }]}
               multiline
-              numberOfLines={8}
+              numberOfLines={10}
               placeholderTextColor={theme.colors.text.tertiary}
             />
-
-            {/* Canais de envio */}
-            <Text style={[sectionLabel, { marginTop: 8 }]}>Enviar via</Text>
-            <View style={{ gap: 8 }}>
-              {patient?.phone ? (
-                <>
-                  <TouchableOpacity
-                    style={channelButtonStyle}
-                    onPress={() => {
-                      const phone = patient.phone?.replace(/\D/g, '') ?? ''
-                      const msg = encodeURIComponent(customMessage
-                        .replace(/<<nome_paciente>>/g, patient.full_name ?? '')
-                        .replace(/<<nome_formulario>>/g, selectedTemplate?.title ?? '')
-                        .replace(/<<senha>>/g, password)
-                        .replace(/<<link>>/g, '[link após envio]')
-                        .replace(/<<senha_acesso>>/g, password)
-                        .replace(/<<link_formulario>>/g, '[link após envio]'))
-                      void Linking.openURL(`whatsapp://send?phone=55${phone}&text=${msg}`)
-                    }}
-                  >
-                    <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>WhatsApp</Text>
-                      <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>{patient.phone}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={channelButtonStyle}
-                    onPress={() => {
-                      const phone = patient.phone?.replace(/\D/g, '') ?? ''
-                      void Linking.openURL(`sms:+55${phone}`)
-                    }}
-                  >
-                    <Ionicons name="chatbubble-outline" size={20} color="#3B82F6" />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>SMS</Text>
-                      <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>{patient.phone}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
-                  </TouchableOpacity>
-                </>
-              ) : null}
-              {patient?.email ? (
-                <TouchableOpacity
-                  style={channelButtonStyle}
-                  onPress={() => {
-                    const body = encodeURIComponent(customMessage
-                      .replace(/<<nome_paciente>>/g, patient.full_name ?? '')
-                      .replace(/<<nome_formulario>>/g, selectedTemplate?.title ?? '')
-                      .replace(/<<senha>>/g, password)
-                      .replace(/<<link>>/g, '[link após envio]')
-                      .replace(/<<senha_acesso>>/g, password)
-                      .replace(/<<link_formulario>>/g, '[link após envio]'))
-                    void Linking.openURL(`mailto:${patient.email}?subject=Formulário - ${selectedTemplate?.title ?? ''}&body=${body}`)
-                  }}
-                >
-                  <Ionicons name="mail-outline" size={20} color={theme.colors.primary} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>E-mail</Text>
-                    <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>{patient.email}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
-                </TouchableOpacity>
-              ) : null}
-              <TouchableOpacity
-                style={channelButtonStyle}
-                onPress={() => {
-                  Clipboard.setString(customMessage
-                    .replace(/<<nome_paciente>>/g, patient?.full_name ?? '')
-                    .replace(/<<nome_formulario>>/g, selectedTemplate?.title ?? '')
-                    .replace(/<<senha>>/g, password)
-                    .replace(/<<link>>/g, '[link após envio]')
-                    .replace(/<<senha_acesso>>/g, password)
-                    .replace(/<<link_formulario>>/g, '[link após envio]'))
-                  Alert.alert('Copiado!', 'Mensagem copiada para a área de transferência.')
-                }}
-              >
-                <Ionicons name="copy-outline" size={20} color={theme.colors.text.secondary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>Copiar mensagem</Text>
-                  <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>Cole onde preferir</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
-              </TouchableOpacity>
-            </View>
+            <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, lineHeight: 18 }}>
+              💡 O link real e os dados completos serão gerados após confirmar o envio (etapa 6). Na etapa final você poderá copiar e enviar a mensagem completa.
+            </Text>
           </View>
         )
 
@@ -685,18 +604,29 @@ export default function SendFormScreen() {
                 {customMessage
                   .replace(/<<nome_paciente>>/g, patient?.full_name ?? '{paciente}')
                   .replace(/<<nome_formulario>>/g, selectedTemplate?.title ?? '{formulário}')
+                  .replace(/<<nome_psicologo>>/g, psicologoDisplayName)
                   .replace(/<<senha>>/g, password || '{senha}')
-                  .replace(/<<link>>/g, '[link gerado após envio]')
-                  // suporte legado
-                  .replace(/<<nome_psicologo>>/g, profile?.full_name ?? '{psicólogo}')
+                  .replace(/<<link>>/g, '[link gerado após confirmar envio]')
+                  .replace(/<<data_limite>>/g, hasExpiry && expiryDate ? expiryDate : 'Sem prazo definido')
                   .replace(/<<senha_acesso>>/g, password || '{senha}')
-                  .replace(/<<link_formulario>>/g, '[link gerado após envio]')}
+                  .replace(/<<link_formulario>>/g, '[link gerado após confirmar envio]')}
               </Text>
             </Card>
           </View>
         )
 
-      case 7:
+      case 7: {
+        // Mensagem compilada com URL real
+        const compiledMsg = customMessage
+          .replace(/<<nome_paciente>>/g, patient?.full_name ?? '')
+          .replace(/<<nome_formulario>>/g, selectedTemplate?.title ?? '')
+          .replace(/<<nome_psicologo>>/g, psicologoDisplayName)
+          .replace(/<<senha>>/g, password)
+          .replace(/<<link>>/g, publicUrl)
+          .replace(/<<data_limite>>/g, hasExpiry && expiryDate ? expiryDate : 'Sem prazo definido')
+          .replace(/<<senha_acesso>>/g, password)
+          .replace(/<<link_formulario>>/g, publicUrl)
+
         return (
           <View style={{ gap: 20, alignItems: 'center', paddingTop: 8 }}>
             <View
@@ -742,11 +672,7 @@ export default function SendFormScreen() {
                 }}
               >
                 <Text
-                  style={{
-                    fontSize: 13,
-                    color: theme.colors.primary,
-                    fontFamily: 'monospace',
-                  }}
+                  style={{ fontSize: 13, color: theme.colors.primary, fontFamily: 'monospace' }}
                   selectable
                 >
                   {publicUrl}
@@ -779,8 +705,77 @@ export default function SendFormScreen() {
                 {password}
               </Text>
             </Card>
+
+            {/* Canais de envio com mensagem compilada + URL real */}
+            <Card style={{ width: '100%', gap: 8 }}>
+              <Text style={sectionLabel}>Enviar mensagem ao paciente</Text>
+              {patient?.phone ? (
+                <>
+                  <TouchableOpacity
+                    style={channelButtonStyle}
+                    onPress={() => {
+                      const phone = patient.phone?.replace(/\D/g, '') ?? ''
+                      void Linking.openURL(`whatsapp://send?phone=55${phone}&text=${encodeURIComponent(compiledMsg)}`)
+                    }}
+                  >
+                    <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>WhatsApp</Text>
+                      <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>{patient.phone}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={channelButtonStyle}
+                    onPress={() => {
+                      const phone = patient.phone?.replace(/\D/g, '') ?? ''
+                      void Linking.openURL(`sms:+55${phone}?body=${encodeURIComponent(compiledMsg)}`)
+                    }}
+                  >
+                    <Ionicons name="chatbubble-outline" size={20} color="#3B82F6" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>SMS</Text>
+                      <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>{patient.phone}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
+                  </TouchableOpacity>
+                </>
+              ) : null}
+              {patient?.email ? (
+                <TouchableOpacity
+                  style={channelButtonStyle}
+                  onPress={() => {
+                    void Linking.openURL(
+                      `mailto:${patient.email}?subject=${encodeURIComponent(`Formulário - ${selectedTemplate?.title ?? ''}`)}&body=${encodeURIComponent(compiledMsg)}`
+                    )
+                  }}
+                >
+                  <Ionicons name="mail-outline" size={20} color={theme.colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>E-mail</Text>
+                    <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>{patient.email}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                style={channelButtonStyle}
+                onPress={() => {
+                  Clipboard.setString(compiledMsg)
+                  Alert.alert('Copiado!', 'Mensagem completa copiada para a área de transferência.')
+                }}
+              >
+                <Ionicons name="copy-outline" size={20} color={theme.colors.text.secondary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text.primary }}>Copiar mensagem</Text>
+                  <Text style={{ fontSize: 12, color: theme.colors.text.tertiary }}>Cole onde preferir</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
+              </TouchableOpacity>
+            </Card>
           </View>
         )
+      }
     }
   }
 

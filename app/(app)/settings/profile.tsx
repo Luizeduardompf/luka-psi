@@ -25,12 +25,15 @@ import { maskPhone } from '@/utils/format'
 import { useSessionStore } from '@/stores/session.store'
 import { useUpdateProfile } from '@/hooks/useProfile'
 import { profileService } from '@/services/profile.service'
+import { useGenders } from '@/hooks/useGenders'
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
   const { profile } = useSessionStore()
   const { mutateAsync, isPending } = useUpdateProfile()
+  const { data: genders = [] } = useGenders()
 
+  const [selectedGenderId, setSelectedGenderId] = useState<string | null>(profile?.gender_id ?? null)
   const [logoUrl, setLogoUrl] = useState<string>(profile?.logo_url ?? '')
   const [logoInput, setLogoInput] = useState<string>(profile?.logo_url ?? '')
   const [isSavingLogo, setIsSavingLogo] = useState(false)
@@ -64,6 +67,7 @@ export default function ProfileScreen() {
     defaultValues: {
       full_name: profile?.full_name ?? '',
       preferred_name: profile?.preferred_name ?? '',
+      commercial_name: profile?.commercial_name ?? '',
       ordem_psicologos: profile?.ordem_psicologos ?? '',
       phone: profile?.phone ?? '',
       address: profile?.address ?? '',
@@ -79,6 +83,8 @@ export default function ProfileScreen() {
       await mutateAsync({
         full_name: data.full_name,
         preferred_name: data.preferred_name || null,
+        commercial_name: data.commercial_name || null,
+        gender_id: selectedGenderId || null,
         ordem_psicologos: data.ordem_psicologos || null,
         phone: data.phone || null,
         address: data.address || null,
@@ -167,6 +173,65 @@ export default function ProfileScreen() {
               error={errors.preferred_name?.message} />
           )}
         />
+        <Controller
+          control={control} name="commercial_name"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input label="Nome comercial" placeholder="Nome usado em mensagens aos pacientes (ex: Ana Silva)"
+              leftIcon="briefcase-outline" autoCapitalize="words"
+              onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+          )}
+        />
+
+        {/* Gênero — usado para Dr./Dra. nas mensagens */}
+        <View style={{ marginBottom: theme.spacing.sm }}>
+          <Text style={{ fontSize: 12, fontWeight: '600', color: theme.colors.text.secondary, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Gênero (para tratamento nas mensagens)
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {genders.map((g) => (
+              <TouchableOpacity
+                key={g.id}
+                onPress={() => setSelectedGenderId(g.id)}
+                style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 99,
+                  borderWidth: 1.5,
+                  borderColor: selectedGenderId === g.id ? theme.colors.primary : theme.colors.border,
+                  backgroundColor: selectedGenderId === g.id ? theme.colors.primaryLight : theme.colors.surface,
+                }}
+              >
+                <Text style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: selectedGenderId === g.id ? theme.colors.primary : theme.colors.text.secondary,
+                }}>
+                  {g.pronoun_treatment} — {g.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              onPress={() => setSelectedGenderId(null)}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 99,
+                borderWidth: 1.5,
+                borderColor: selectedGenderId === null ? theme.colors.primary : theme.colors.border,
+                backgroundColor: selectedGenderId === null ? theme.colors.primaryLight : theme.colors.surface,
+              }}
+            >
+              <Text style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: selectedGenderId === null ? theme.colors.primary : theme.colors.text.secondary,
+              }}>
+                Não informar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <Controller
           control={control} name="ordem_psicologos"
           render={({ field: { onChange, onBlur, value } }) => (

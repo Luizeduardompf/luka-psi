@@ -2,6 +2,7 @@ import { Tables, TablesInsert, TablesUpdate, AdditionalContact } from './databas
 
 // ─── Domain aliases ────────────────────────────────────────────────────────────
 export type Profile = Tables<'profiles'>
+export type Gender = Tables<'genders'>
 export type Patient = Tables<'patients'>
 export type PatientInsert = TablesInsert<'patients'>
 export type PatientUpdate = TablesUpdate<'patients'>

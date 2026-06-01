@@ -33,7 +33,7 @@ const PUBLIC_BASE_URL =
   process.env.EXPO_PUBLIC_APP_URL ?? 'https://app.luka.com.br'
 
 function buildPublicUrl(token: string): string {
-  return `${PUBLIC_BASE_URL}/forms/${token}`
+  return `${PUBLIC_BASE_URL}/f/${token}`
 }
 
 function buildSnapshot(
@@ -992,6 +992,29 @@ export const formsService = {
       if (updateResult.error) return { data: null, error: updateResult.error }
 
       return { data: publicUrl, error: null }
+    } catch (err) {
+      return { data: null, error: formatSupabaseError(err) }
+    }
+  },
+
+  async getTemplatePreview(templateId: string): Promise<ServiceResult<{
+    template: { title: string; description: string | null }
+    sections: Array<{ id: string; title: string; description: string | null; sort_order: number }>
+    questions: Array<{
+      id: string; section_id: string | null; type: string; title: string
+      description: string | null; help_text: string | null; is_required: boolean
+      sort_order: number; scale_min: number; scale_max: number; scale_step: number
+    }>
+    options: Array<{ id: string; question_id: string; label: string; value: string; sort_order: number }>
+  }>> {
+    try {
+      const { data, error } = await supabase.rpc('get_form_template_preview', {
+        p_template_id: templateId,
+      })
+      if (error) return { data: null, error: formatSupabaseError(error) }
+      if (!data) return { data: null, error: 'Template não encontrado.' }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return { data: data as any, error: null }
     } catch (err) {
       return { data: null, error: formatSupabaseError(err) }
     }

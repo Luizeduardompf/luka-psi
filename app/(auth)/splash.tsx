@@ -9,7 +9,7 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated'
-import { router } from 'expo-router'
+import { router, usePathname } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
 import { useSessionStore } from '@/stores/session.store'
@@ -18,6 +18,9 @@ import { config } from '@/constants/config'
 export default function SplashScreen() {
   const { session, isInitialized } = useSessionStore()
   const isAuthenticated = !!session
+  const pathname = usePathname()
+  // Não redirecionar quando estiver em rota pública de formulários
+  const isFocused = !pathname.startsWith('/f')
 
   const opacity = useSharedValue(0)
   const scale = useSharedValue(0.82)
@@ -34,6 +37,9 @@ export default function SplashScreen() {
 
   useEffect(() => {
     const navigate = () => {
+      // Skip navigation if this screen is mounted in the background
+      // (e.g. when deep-linking directly to /forms/[token])
+      if (!isFocused) return
       if (isInitialized && isAuthenticated) {
         router.replace('/(app)')
       } else {
@@ -60,7 +66,7 @@ export default function SplashScreen() {
     }, config.splash.duration)
 
     return () => clearTimeout(timer)
-  }, [isAuthenticated, isInitialized, opacity, scale, taglineOpacity])
+  }, [isAuthenticated, isInitialized, isFocused, opacity, scale, taglineOpacity])
 
   return (
     <LinearGradient
