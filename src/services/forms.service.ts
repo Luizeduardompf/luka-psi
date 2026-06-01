@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, supabasePublic } from './supabase'
 import { formatSupabaseError } from '@/utils/errors'
 import {
   FormTemplate,
@@ -732,7 +732,7 @@ export const formsService = {
     token: string,
   ): Promise<ServiceResult<FormSubmission | null>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .from('form_submissions')
         .select('*')
         .eq('token', token)
@@ -766,7 +766,7 @@ export const formsService = {
     // Verificar expiração
     if (sub.expires_at && new Date(sub.expires_at) < new Date()) {
       if (sub.status !== 'expired') {
-        await supabase
+        await supabasePublic
           .from('form_submissions')
           .update({ status: 'expired' } as never)
           .eq('id', sub.id)
@@ -782,7 +782,7 @@ export const formsService = {
     const now = new Date().toISOString()
     const isFirstAccess = !sub.first_opened_at
 
-    await supabase
+    await supabasePublic
       .from('form_submissions')
       .update({
         status: 'in_progress',
@@ -791,7 +791,7 @@ export const formsService = {
       } as never)
       .eq('id', sub.id)
 
-    await supabase.from('form_audit_logs').insert({
+    await supabasePublic.from('form_audit_logs').insert({
       submission_id: sub.id,
       event: isFirstAccess ? 'opened' : 'reopened',
     } as never)
@@ -802,7 +802,7 @@ export const formsService = {
   // Buscar respostas salvas para uma submission
   async getResponses(submissionId: string): Promise<ServiceResult<FormResponse[]>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .from('form_responses')
         .select('*')
         .eq('submission_id', submissionId)
@@ -818,7 +818,7 @@ export const formsService = {
   async saveResponse(input: SubmitResponseInput): Promise<ServiceResult<FormResponse>> {
     try {
       // Verificar que submission não está concluída
-      const { data: sub } = await supabase
+      const { data: sub } = await supabasePublic
         .from('form_submissions')
         .select('status, completed_at')
         .eq('id', input.submission_id)
@@ -828,7 +828,7 @@ export const formsService = {
         return { data: null, error: 'Este formulário já foi concluído e não pode ser alterado.' }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .from('form_responses')
         .upsert(
           {
@@ -858,7 +858,7 @@ export const formsService = {
     responses: FormResponse[],
   ): Promise<ServiceResult<FormSubmission>> {
     try {
-      const { data: sub } = await supabase
+      const { data: sub } = await supabasePublic
         .from('form_submissions')
         .select('*')
         .eq('id', submissionId)
@@ -899,7 +899,7 @@ export const formsService = {
         }
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .from('form_submissions')
         .update({
           status: 'completed',
@@ -911,7 +911,7 @@ export const formsService = {
 
       if (error) return { data: null, error: formatSupabaseError(error) }
 
-      await supabase.from('form_audit_logs').insert({
+      await supabasePublic.from('form_audit_logs').insert({
         submission_id: submissionId,
         event: 'completed',
       } as never)
@@ -927,7 +927,7 @@ export const formsService = {
     psychologistId: string,
   ): Promise<ServiceResult<{ full_name: string; logo_url: string | null }>> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabasePublic
         .from('profiles')
         .select('full_name, logo_url')
         .eq('id', psychologistId)
@@ -1008,7 +1008,7 @@ export const formsService = {
     options: Array<{ id: string; question_id: string; label: string; value: string; sort_order: number }>
   }>> {
     try {
-      const { data, error } = await supabase.rpc('get_form_template_preview', {
+      const { data, error } = await supabasePublic.rpc('get_form_template_preview', {
         p_template_id: templateId,
       })
       if (error) return { data: null, error: formatSupabaseError(error) }

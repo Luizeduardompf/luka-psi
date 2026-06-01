@@ -45,3 +45,18 @@ export const supabase = createClient<Database>(
     },
   },
 )
+
+// Cliente sem sessão para rotas públicas (ex: página de formulário do paciente).
+// Sempre usa o anon key — nunca carrega sessão do psicólogo que possa estar
+// armazenada no localStorage/SecureStore, evitando 401 em requests públicos.
+export const supabasePublic = createClient<Database>(
+  config.supabase.url,
+  config.supabase.anonKey,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  },
+)
