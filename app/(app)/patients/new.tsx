@@ -7,6 +7,7 @@ import { PatientForm } from '@/components/patients/PatientForm'
 import { theme } from '@/constants/theme'
 import { useCreatePatient } from '@/hooks/usePatients'
 import { PatientSchemaData } from '@/utils/validators'
+import { Toast, useToast } from '@/components/ui/Toast'
 
 function schemaToInsert(data: PatientSchemaData) {
   return {
@@ -19,6 +20,7 @@ function schemaToInsert(data: PatientSchemaData) {
     nif: data.nif || null,
     date_of_birth: data.date_of_birth || null,
     gender: data.gender || null,
+    gender_id: data.gender_id || null,
     profession: data.profession || null,
     education: data.education || null,
     civil_status_id: data.civil_status_id || null,
@@ -50,6 +52,7 @@ function schemaToInsert(data: PatientSchemaData) {
 export default function NewPatientScreen() {
   const insets = useSafeAreaInsets()
   const createMutation = useCreatePatient()
+  const { toast, showToast, hideToast } = useToast()
 
   const handleSubmit = useCallback(
     async (data: PatientSchemaData) => {
@@ -57,7 +60,8 @@ export default function NewPatientScreen() {
         createMutation.mutate(schemaToInsert(data), {
           onSuccess: () => {
             resolve()
-            router.back()
+            showToast('Paciente guardado com sucesso!')
+            setTimeout(() => router.back(), 800)
           },
           onError: (err) => {
             Alert.alert('Erro ao salvar', err.message)
@@ -66,7 +70,7 @@ export default function NewPatientScreen() {
         })
       })
     },
-    [createMutation],
+    [createMutation, showToast],
   )
 
   return (
@@ -77,6 +81,7 @@ export default function NewPatientScreen() {
         paddingTop: insets.top,
       }}
     >
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
       <View
         style={{
           flexDirection: 'row',

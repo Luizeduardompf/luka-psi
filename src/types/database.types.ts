@@ -52,6 +52,7 @@ export type Database = {
           city: string | null
           country: string | null
           nif: string | null
+          birth_date: string | null
           onboarding_completed: boolean
           created_at: string
           updated_at: string
@@ -72,6 +73,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           nif?: string | null
+          birth_date?: string | null
           onboarding_completed?: boolean
           created_at?: string
           updated_at?: string
@@ -92,6 +94,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           nif?: string | null
+          birth_date?: string | null
           onboarding_completed?: boolean
           created_at?: string
           updated_at?: string

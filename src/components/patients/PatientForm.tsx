@@ -20,12 +20,12 @@ import { theme } from '@/constants/theme'
 import { patientSchema, PatientSchemaData } from '@/utils/validators'
 import { maskCpf, maskNif, maskPhone } from '@/utils/format'
 import {
-  GENDER_OPTIONS,
   STATUS_OPTIONS,
   EDUCATION_OPTIONS,
   Patient,
 } from '@/types/app.types'
 import { useCivilStatuses, useInsurers, usePlans } from '@/hooks/useLookups'
+import { useGenders } from '@/hooks/useGenders'
 
 interface PatientFormProps {
   initialData?: Partial<Patient>
@@ -259,6 +259,7 @@ export const PatientForm = memo(function PatientForm({
   const { data: civilStatuses } = useCivilStatuses()
   const { data: insurers } = useInsurers()
   const { data: plans } = usePlans(selectedInsurerId || undefined)
+  const { data: gendersData = [] } = useGenders()
 
   const {
     control,
@@ -274,6 +275,7 @@ export const PatientForm = memo(function PatientForm({
       preferred_name: initialData?.preferred_name ?? '',
       date_of_birth: initialData?.date_of_birth ?? '',
       gender: initialData?.gender ?? '',
+      gender_id: initialData?.gender_id ?? '',
       profession: initialData?.profession ?? '',
       education: initialData?.education ?? '',
       civil_status_id: initialData?.civil_status_id ?? '',
@@ -346,6 +348,11 @@ export const PatientForm = memo(function PatientForm({
 
   const parsedDob =
     dobValue && isValid(parseISO(dobValue)) ? parseISO(dobValue) : new Date()
+
+  const genderOptions = [
+    { label: 'Sem indicação', value: '' },
+    ...(gendersData ?? []).map((g) => ({ label: g.name, value: g.id })),
+  ]
 
   const civilStatusOptions = [
     { label: 'Sem indicação', value: '' },
@@ -449,14 +456,14 @@ export const PatientForm = memo(function PatientForm({
             )}
           />
 
-          {/* Gender — dropdown */}
+          {/* Gender — dropdown from genders table */}
           <Controller
             control={control}
-            name="gender"
+            name="gender_id"
             render={({ field: { onChange, value } }) => (
               <SelectDropdown
                 label="Género / Sexo"
-                options={GENDER_OPTIONS}
+                options={genderOptions}
                 value={value ?? ''}
                 onChange={onChange}
                 placeholder="Selecionar género..."

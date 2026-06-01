@@ -21,6 +21,8 @@ import { usePatient, useUpdatePatient, useDeletePatient } from '@/hooks/usePatie
 import { formatDate, formatPhone, formatCpf, getPatientAvatarUrl } from '@/utils/format'
 import { PatientSchemaData } from '@/utils/validators'
 import { PatientStatus } from '@/types/app.types'
+import { useGenders } from '@/hooks/useGenders'
+import { Toast, useToast } from '@/components/ui/Toast'
 
 type ActiveTab = 'info' | 'forms'
 
@@ -90,6 +92,8 @@ export default function PatientDetailScreen() {
   const { data: patient, isLoading, refetch } = usePatient(id)
   const updateMutation = useUpdatePatient(id)
   const deleteMutation = useDeletePatient()
+  const { data: gendersData = [] } = useGenders()
+  const { toast, showToast, hideToast } = useToast()
 
   const handleDelete = useCallback(() => {
     if (!patient) return
@@ -125,6 +129,7 @@ export default function PatientDetailScreen() {
             nif: data.nif || null,
             date_of_birth: data.date_of_birth || null,
             gender: data.gender || null,
+            gender_id: data.gender_id || null,
             profession: data.profession || null,
             education: data.education || null,
             civil_status_id: data.civil_status_id || null,
@@ -155,6 +160,7 @@ export default function PatientDetailScreen() {
             onSuccess: () => {
               resolve()
               setEditVisible(false)
+              showToast('Paciente atualizado com sucesso!')
               void refetch()
             },
             onError: (err) => {
@@ -197,6 +203,7 @@ export default function PatientDetailScreen() {
         paddingTop: insets.top,
       }}
     >
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
       {/* Header bar */}
       <View
         style={{
@@ -340,7 +347,13 @@ export default function PatientDetailScreen() {
             <InfoRow
               icon="transgender-outline"
               label="Gênero"
-              value={patient.gender ? GENDER_LABEL[patient.gender] : null}
+              value={
+                patient.gender_id
+                  ? (gendersData.find((g) => g.id === patient.gender_id)?.name ?? null)
+                  : patient.gender
+                    ? GENDER_LABEL[patient.gender]
+                    : null
+              }
             />
             <InfoRow icon="card-outline" label="CPF" value={patient.cpf ? formatCpf(patient.cpf) : null} />
             <InfoRow icon="card-outline" label="NIF" value={patient.nif ?? null} />

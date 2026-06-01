@@ -140,13 +140,14 @@ export default function SendFormScreen() {
     const interpolated = customMessage
       .replace(/<<nome_paciente>>/g, patient?.full_name ?? '')
       .replace(/<<nome_formulario>>/g, selectedTemplate.title)
-      .replace(/<<senha>>/g, password)
+      .replace(/<<senha>>/g, '')        // senha não armazenada na mensagem pública
       .replace(/<<link>>/g, tokenPlaceholder)
       .replace(/<<data_limite>>/g, dataLimiteStr)
       // Suporte a placeholders legados
       .replace(/<<nome_psicologo>>/g, psicologoDisplayName)
-      .replace(/<<senha_acesso>>/g, password)
+      .replace(/<<senha_acesso>>/g, '')  // senha não armazenada na mensagem pública
       .replace(/<<link_formulario>>/g, tokenPlaceholder)
+      .trim()
 
     const input: SendFormInput = {
       patient_id: patientId,

@@ -230,6 +230,18 @@ export const formsService = {
     input: CreateFormTemplateInput,
   ): Promise<ServiceResult<FormTemplate>> {
     try {
+      // Unique name check per psychologist
+      const { data: existing } = await supabase
+        .from('form_templates')
+        .select('id')
+        .eq('psychologist_id', psychologistId)
+        .ilike('title', input.title.trim())
+        .eq('is_archived', false)
+        .maybeSingle()
+      if (existing) {
+        return { data: null, error: 'Já existe um formulário com este nome. Escolha um nome diferente.' }
+      }
+
       const { data, error } = await supabase
         .from('form_templates')
         .insert({

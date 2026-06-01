@@ -73,12 +73,24 @@ export const onboardingSchema = z.object({
   nif: z.string().optional().or(z.literal('')),
 })
 
+// DD/MM/YYYY date validation
+function isValidDateDDMMYYYY(value: string): boolean {
+  if (!value || value.trim() === '') return true // optional
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return false
+  const d = parseInt(match[1], 10)
+  const m = parseInt(match[2], 10)
+  const y = parseInt(match[3], 10)
+  if (m < 1 || m > 12) return false
+  const date = new Date(y, m - 1, d)
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d
+}
+
 export const profileSchema = z.object({
   full_name: z
     .string()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo'),
-  preferred_name: z.string().optional().or(z.literal('')),
   commercial_name: z.string().optional().or(z.literal('')),
   ordem_psicologos: z.string().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
@@ -86,7 +98,24 @@ export const profileSchema = z.object({
   postal_code: z.string().optional().or(z.literal('')),
   city: z.string().optional().or(z.literal('')),
   country: z.string().optional().or(z.literal('')),
-  nif: z.string().optional().or(z.literal('')),
+  nif: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (v) => {
+        if (!v || v.replace(/\D/g, '').length === 0) return true
+        return isValidCpf(v) || isValidNif(v)
+      },
+      { message: 'CPF ou NIF inválido' },
+    ),
+  birth_date: z
+    .string()
+    .optional()
+    .or(z.literal(''))
+    .refine((v) => !v || isValidDateDDMMYYYY(v), {
+      message: 'Data inválida. Use o formato DD/MM/AAAA',
+    }),
 })
 
 const additionalContactSchema = z.object({
@@ -106,6 +135,7 @@ export const patientSchema = z
     preferred_name: z.string().optional().or(z.literal('')),
     date_of_birth: z.string().optional().or(z.literal('')),
     gender: z.string().optional().or(z.literal('')),
+    gender_id: z.string().optional().or(z.literal('')),
     profession: z.string().optional().or(z.literal('')),
     education: z.string().optional().or(z.literal('')),
     civil_status_id: z.string().optional().or(z.literal('')),

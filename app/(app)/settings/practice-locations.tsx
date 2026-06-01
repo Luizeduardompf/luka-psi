@@ -11,6 +11,7 @@ import { theme } from '@/constants/theme'
 import { supabase } from '@/services/supabase'
 import { Button } from '@/components/ui/Button'
 import { useSessionStore } from '@/stores/session.store'
+import { Toast, useToast } from '@/components/ui/Toast'
 
 interface PracticeLocation {
   id: string
@@ -76,6 +77,7 @@ export default function PracticeLocationsScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['practice-locations'] }),
   })
 
+  const { toast, showToast, hideToast } = useToast()
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<PracticeLocation | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -100,6 +102,7 @@ export default function PracticeLocationsScreen() {
     try {
       await save.mutateAsync({ id: editing?.id, ...form })
       setModal(false)
+      showToast(editing ? 'Local atualizado com sucesso!' : 'Local criado com sucesso!')
     } catch (e: unknown) {
       Alert.alert('Erro', e instanceof Error ? e.message : 'Erro ao guardar.')
     }
@@ -107,6 +110,7 @@ export default function PracticeLocationsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
       <View style={{
         paddingTop: insets.top + theme.spacing.sm, paddingBottom: theme.spacing.md,
         paddingHorizontal: theme.spacing.md, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md,

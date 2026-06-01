@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { theme } from '@/constants/theme'
 import { supabase } from '@/services/supabase'
 import { Button } from '@/components/ui/Button'
+import { Toast, useToast } from '@/components/ui/Toast'
 
 interface Country {
   id: string
@@ -59,6 +60,7 @@ export default function CountriesScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['countries-crud'] }),
   })
 
+  const { toast, showToast, hideToast } = useToast()
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Country | null>(null)
   const [form, setForm] = useState<typeof EMPTY>(EMPTY)
@@ -75,6 +77,7 @@ export default function CountriesScreen() {
     try {
       await save.mutateAsync({ id: editing?.id, ...form, sort_order: editing?.sort_order ?? (query.data?.length ?? 0) + 1 })
       setModal(false)
+      showToast(editing ? 'País atualizado com sucesso!' : 'País criado com sucesso!')
     } catch (e: unknown) {
       Alert.alert('Erro', e instanceof Error ? e.message : 'Erro ao guardar.')
     }
@@ -82,6 +85,7 @@ export default function CountriesScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
       <View style={{
         paddingTop: insets.top + theme.spacing.sm, paddingBottom: theme.spacing.md,
         paddingHorizontal: theme.spacing.md, flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md,

@@ -16,6 +16,7 @@ import { theme } from '@/constants/theme'
 import { useSession } from '@/hooks/useSession'
 import { usePatients, useRecentPatients } from '@/hooks/usePatients'
 import { greetingByHour } from '@/utils/format'
+import { useGenders, getPronounTreatment } from '@/hooks/useGenders'
 
 // ─── Stat card ─────────────────────────────────────────────────────────────────
 function StatCard({
@@ -130,6 +131,8 @@ export default function DashboardScreen() {
   const activePatients = usePatients({ status: 'active' })
   const recentPatients = useRecentPatients(5)
 
+  const { data: genders = [] } = useGenders()
+
   const isRefreshing =
     allPatients.isFetching ||
     activePatients.isFetching ||
@@ -141,9 +144,11 @@ export default function DashboardScreen() {
     void recentPatients.refetch()
   }, [allPatients, activePatients, recentPatients])
 
-  // Usa preferred_name se disponível, evitando exibir títulos como "Dr." do full_name
-  const displayNameForGreeting = profile?.preferred_name ?? displayName
-  const firstName = displayNameForGreeting.split(' ')[0] ?? displayNameForGreeting
+  // Greeting: pronome + nome profissional (ou nome completo como fallback)
+  const pronoun = profile?.gender_id ? getPronounTreatment(genders, profile.gender_id) : ''
+  const professionalName = profile?.commercial_name || displayName
+  const greetingName = pronoun ? `${pronoun} ${professionalName}` : professionalName
+  const firstName = greetingName.split(' ')[0] ?? greetingName
 
   return (
     <View

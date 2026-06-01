@@ -13,7 +13,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -77,6 +76,8 @@ export default function PublicFormPage() {
   const [responses, setResponses] = useState<Map<string, Partial<FormResponse>>>(new Map())
   const [isSaving, setIsSaving] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [requiredErrors, setRequiredErrors] = useState<Set<string>>(new Set())
 
   // Auto-save debounce
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
@@ -243,6 +244,35 @@ export default function PublicFormPage() {
 
   async function handleComplete() {
     if (!submission) return
+    setSubmitError(null)
+
+    // Client-side required field check before saving
+    const snap = submission.snapshot
+    const requiredIds = snap.questions.filter((q) => q.is_required).map((q) => q.id)
+
+    const hasAnswer = (r: Partial<FormResponse> | undefined): boolean => {
+      if (!r) return false
+      if (r.answer_text !== null && r.answer_text !== undefined && r.answer_text.trim() !== '') return true
+      if (r.answer_options !== null && r.answer_options !== undefined && (r.answer_options as unknown[]).length > 0) return true
+      if (r.answer_number !== null && r.answer_number !== undefined) return true
+      if (r.answer_date !== null && r.answer_date !== undefined) return true
+      if (r.answer_boolean !== null && r.answer_boolean !== undefined) return true
+      return false
+    }
+
+    const missing = requiredIds.filter((id) => !hasAnswer(responses.get(id)))
+
+    if (missing.length > 0) {
+      setRequiredErrors(new Set(missing))
+      const missingTitles = snap.questions
+        .filter((q) => missing.includes(q.id))
+        .map((q) => q.title)
+      setSubmitError(`Por favor responda as perguntas obrigatórias: ${missingTitles.join(', ')}`)
+      // Scroll to first missing question
+      return
+    }
+
+    setRequiredErrors(new Set())
     setIsSubmitting(true)
 
     // Salvar todas as respostas pendentes
@@ -269,7 +299,7 @@ export default function PublicFormPage() {
     )
 
     if (result.error) {
-      Alert.alert('Atencao', result.error)
+      setSubmitError(result.error)
       setIsSubmitting(false)
       return
     }
@@ -748,25 +778,42 @@ export default function PublicFormPage() {
                       <View style={{ flex: 1, height: 1, backgroundColor: theme.colors.border }} />
                     </View>
                   )}
-                  {sectionQuestions.map((q: SnapshotQuestion) => (
-                    <View
-                      key={q.id}
-                      style={{
-                        backgroundColor: theme.colors.surface,
-                        borderRadius: theme.radius.md,
-                        padding: 16,
-                        marginBottom: 12,
-                        borderWidth: 1,
-                        borderColor: theme.colors.border,
-                      }}
-                    >
-                      <QuestionRenderer
-                        question={q}
-                        response={(responses.get(q.id) as FormResponse) ?? null}
-                        onChange={(partial) => handleResponseChange(q.id, partial)}
-                      />
-                    </View>
-                  ))}
+                  {sectionQuestions.map((q: SnapshotQuestion) => {
+                    const hasError = requiredErrors.has(q.id)
+                    return (
+                      <View
+                        key={q.id}
+                        style={{
+                          backgroundColor: theme.colors.surface,
+                          borderRadius: theme.radius.md,
+                          padding: 16,
+                          marginBottom: 12,
+                          borderWidth: hasError ? 2 : 1,
+                          borderColor: hasError ? theme.colors.error : theme.colors.border,
+                        }}
+                      >
+                        {hasError && (
+                          <Text style={{ fontSize: 11, color: theme.colors.error, marginBottom: 4, fontWeight: '600' }}>
+                            Campo obrigatório
+                          </Text>
+                        )}
+                        <QuestionRenderer
+                          question={q}
+                          response={(responses.get(q.id) as FormResponse) ?? null}
+                          onChange={(partial) => {
+                            handleResponseChange(q.id, partial)
+                            if (hasError) {
+                              setRequiredErrors((prev) => {
+                                const next = new Set(prev)
+                                next.delete(q.id)
+                                return next
+                              })
+                            }
+                          }}
+                        />
+                      </View>
+                    )
+                  })}
                 </View>
               )
             })}
@@ -783,20 +830,22 @@ export default function PublicFormPage() {
             borderTopColor: theme.colors.border,
             padding: 16,
             paddingBottom: insets.bottom + 16,
+            gap: 8,
           }}
         >
+          {submitError ? (
+            <View style={{
+              backgroundColor: '#FEF2F2', borderRadius: 8, padding: 10,
+              borderWidth: 1, borderColor: '#FECACA',
+            }}>
+              <Text style={{ fontSize: 13, color: '#DC2626', lineHeight: 18 }}>
+                {submitError}
+              </Text>
+            </View>
+          ) : null}
           <Button
             title="Concluir e enviar"
-            onPress={() => {
-              Alert.alert(
-                'Concluir formulario',
-                'Apos enviar, suas respostas nao poderao ser alteradas. Deseja continuar?',
-                [
-                  { text: 'Revisar', style: 'cancel' },
-                  { text: 'Enviar', onPress: handleComplete },
-                ],
-              )
-            }}
+            onPress={handleComplete}
             loading={isSubmitting}
             fullWidth
             leftIcon={<Ionicons name="checkmark-circle-outline" size={18} color="#FFF" />}

@@ -28,6 +28,7 @@ import { useUpdateProfile } from '@/hooks/useProfile'
 import { profileService } from '@/services/profile.service'
 import { supabase } from '@/services/supabase'
 import { useGenders } from '@/hooks/useGenders'
+import { Toast, useToast } from '@/components/ui/Toast'
 
 // ─── Gender dropdown ──────────────────────────────────────────────────────────
 function GenderDropdown({
@@ -137,6 +138,7 @@ export default function ProfileScreen() {
   const { mutateAsync, isPending } = useUpdateProfile()
   const { data: genders = [] } = useGenders()
 
+  const { toast, showToast, hideToast } = useToast()
   const [selectedGenderId, setSelectedGenderId] = useState<string | null>(profile?.gender_id ?? null)
   const [logoUrl, setLogoUrl] = useState<string>(profile?.logo_url ?? '')
   const [signatureUrl, setSignatureUrl] = useState<string>(profile?.signature_url ?? '')
@@ -185,7 +187,6 @@ export default function ProfileScreen() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       full_name: profile?.full_name ?? '',
-      preferred_name: profile?.preferred_name ?? '',
       commercial_name: profile?.commercial_name ?? '',
       ordem_psicologos: profile?.ordem_psicologos ?? '',
       phone: profile?.phone ?? '',
@@ -194,14 +195,26 @@ export default function ProfileScreen() {
       city: profile?.city ?? '',
       country: profile?.country ?? '',
       nif: profile?.nif ?? '',
+      birth_date: (profile as unknown as { birth_date?: string | null })?.birth_date
+        ? (() => {
+            const d = (profile as unknown as { birth_date: string }).birth_date
+            const [y, m, day] = d.split('-')
+            return `${day}/${m}/${y}`
+          })()
+        : '',
     },
   })
 
   const onSubmit = async (data: ProfileFormData) => {
     try {
+      // Convert birth_date from DD/MM/YYYY to YYYY-MM-DD for storage
+      let birthDateISO: string | null = null
+      if (data.birth_date && data.birth_date.includes('/')) {
+        const [d, m, y] = data.birth_date.split('/')
+        birthDateISO = `${y}-${m}-${d}`
+      }
       await mutateAsync({
         full_name: data.full_name,
-        preferred_name: data.preferred_name || null,
         commercial_name: data.commercial_name || null,
         gender_id: selectedGenderId || null,
         ordem_psicologos: data.ordem_psicologos || null,
@@ -211,9 +224,10 @@ export default function ProfileScreen() {
         city: data.city || null,
         country: data.country || null,
         nif: data.nif || null,
-      })
-      Alert.alert('Salvo', 'Perfil atualizado com sucesso!')
-      router.back()
+        ...(birthDateISO !== null ? { birth_date: birthDateISO } : {}),
+      } as never)
+      showToast('Perfil atualizado com sucesso!')
+      setTimeout(() => router.back(), 800)
     } catch (err: unknown) {
       Alert.alert('Erro', err instanceof Error ? err.message : 'Erro ao salvar.')
     }
@@ -224,6 +238,7 @@ export default function ProfileScreen() {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
       {/* Header */}
       <View
         style={{
@@ -280,14 +295,6 @@ export default function ProfileScreen() {
               error={errors.full_name?.message} />
           )}
         />
-        <Controller control={control} name="preferred_name"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nome preferencial" placeholder="Como prefere ser chamado(a)"
-              leftIcon="happy-outline" autoCapitalize="words"
-              onChangeText={onChange} onBlur={onBlur} value={value}
-              error={errors.preferred_name?.message} />
-          )}
-        />
         <Controller control={control} name="commercial_name"
           render={({ field: { onChange, onBlur, value } }) => (
             <Input label="Nome profissional" placeholder="Nome usado em mensagens aos pacientes (ex: Ana Silva)"
@@ -321,10 +328,26 @@ export default function ProfileScreen() {
         />
         <Controller control={control} name="nif"
           render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="CPF / NIF *" placeholder="Número de identificação fiscal"
+            <Input label="CPF / NIF" placeholder="Número de identificação fiscal"
               leftIcon="card-outline" keyboardType="numeric"
               onChangeText={onChange} onBlur={onBlur} value={value}
               error={errors.nif?.message} />
+          )}
+        />
+        <Controller control={control} name="birth_date"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <Input label="Data de nascimento" placeholder="DD/MM/AAAA"
+              leftIcon="calendar-outline" keyboardType="numeric"
+              onChangeText={(v) => {
+                // Auto-mask DD/MM/YYYY
+                const digits = v.replace(/\D/g, '').slice(0, 8)
+                let masked = digits
+                if (digits.length > 2) masked = digits.slice(0, 2) + '/' + digits.slice(2)
+                if (digits.length > 4) masked = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4)
+                onChange(masked)
+              }}
+              onBlur={onBlur} value={value ?? ''}
+              error={(errors as { birth_date?: { message?: string } }).birth_date?.message} />
           )}
         />
 

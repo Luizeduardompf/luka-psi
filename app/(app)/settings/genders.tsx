@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { theme } from '@/constants/theme'
 import { supabase } from '@/services/supabase'
 import { Button } from '@/components/ui/Button'
+import { Toast, useToast } from '@/components/ui/Toast'
 
 interface Gender {
   id: string
@@ -63,6 +64,7 @@ const EMPTY: Omit<Gender, 'id'> = { name: '', pronoun_treatment: '', terminology
 export default function GendersScreen() {
   const insets = useSafeAreaInsets()
   const { query, create, update, remove } = useGendersCRUD()
+  const { toast, showToast, hideToast } = useToast()
   const [modalVisible, setModalVisible] = useState(false)
   const [editing, setEditing] = useState<Gender | null>(null)
   const [form, setForm] = useState<Omit<Gender, 'id'>>(EMPTY)
@@ -74,11 +76,12 @@ export default function GendersScreen() {
     if (!form.name.trim()) { Alert.alert('Erro', 'Nome é obrigatório.'); return }
     try {
       if (editing) {
-        await update.mutateAsync({ id: editing.id, ...form, terminology: form.terminology || null })
+        await update.mutateAsync({ id: editing.id, ...form, terminology: null })
       } else {
-        await create.mutateAsync({ ...form, terminology: form.terminology || null, sort_order: (query.data?.length ?? 0) + 1 })
+        await create.mutateAsync({ ...form, terminology: null, sort_order: (query.data?.length ?? 0) + 1 })
       }
       setModalVisible(false)
+      showToast(editing ? 'Género atualizado com sucesso!' : 'Género criado com sucesso!')
     } catch (e: unknown) {
       Alert.alert('Erro', e instanceof Error ? e.message : 'Erro ao guardar.')
     }
@@ -93,6 +96,7 @@ export default function GendersScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} onHide={hideToast} />
       <View style={{
         paddingTop: insets.top + theme.spacing.sm,
         paddingBottom: theme.spacing.md,
@@ -123,7 +127,7 @@ export default function GendersScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text.primary }}>{g.name}</Text>
               <Text style={{ fontSize: 13, color: theme.colors.text.secondary, marginTop: 2 }}>
-                Pronome: {g.pronoun_treatment || '—'} · Terminologia: {g.terminology || 'sem prefixo'}
+                Pronome: {g.pronoun_treatment || '—'}
               </Text>
             </View>
             <TouchableOpacity onPress={() => openEdit(g)} style={{ padding: 4 }}>
@@ -148,7 +152,6 @@ export default function GendersScreen() {
             {([
               { key: 'name', label: 'Nome *', placeholder: 'Ex: Feminino' },
               { key: 'pronoun_treatment', label: 'Pronome (usado em mensagens)', placeholder: 'Ex: Dra.' },
-              { key: 'terminology', label: 'Terminologia (opcional)', placeholder: 'Ex: Dra., Sra., Srta. — vazio = sem prefixo' },
             ] as const).map(({ key, label, placeholder }) => (
               <View key={key}>
                 <Text style={fl}>{label}</Text>
