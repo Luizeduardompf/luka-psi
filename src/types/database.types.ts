@@ -40,13 +40,14 @@ export type Database = {
           id: string
           full_name: string
           preferred_name: string | null
-          commercial_name: string | null
+          professional_name: string | null
           gender_id: string | null
           crp: string | null
           ordem_psicologos: string | null
           phone: string | null
           avatar_url: string | null
           logo_url: string | null
+          signature_url: string | null
           address: string | null
           postal_code: string | null
           city: string | null
@@ -61,13 +62,14 @@ export type Database = {
           id: string
           full_name: string
           preferred_name?: string | null
-          commercial_name?: string | null
+          professional_name?: string | null
           gender_id?: string | null
           crp?: string | null
           ordem_psicologos?: string | null
           phone?: string | null
           avatar_url?: string | null
           logo_url?: string | null
+          signature_url?: string | null
           address?: string | null
           postal_code?: string | null
           city?: string | null
@@ -82,13 +84,14 @@ export type Database = {
           id?: string
           full_name?: string
           preferred_name?: string | null
-          commercial_name?: string | null
+          professional_name?: string | null
           gender_id?: string | null
           crp?: string | null
           ordem_psicologos?: string | null
           phone?: string | null
           avatar_url?: string | null
           logo_url?: string | null
+          signature_url?: string | null
           address?: string | null
           postal_code?: string | null
           city?: string | null

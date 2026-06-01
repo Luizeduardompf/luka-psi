@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -140,10 +140,19 @@ export default function ProfileScreen() {
 
   const { toast, showToast, hideToast } = useToast()
   const [selectedGenderId, setSelectedGenderId] = useState<string | null>(profile?.gender_id ?? null)
+  const [genderError, setGenderError] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string>(profile?.logo_url ?? '')
   const [signatureUrl, setSignatureUrl] = useState<string>(profile?.signature_url ?? '')
   const [isUploadingLogo, setIsUploadingLogo] = useState(false)
   const [isUploadingSignature, setIsUploadingSignature] = useState(false)
+  const [authEmail, setAuthEmail] = useState<string>('')
+
+  // Load auth email
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthEmail(data?.user?.email ?? '')
+    })
+  }, [])
 
   const handleUploadLogo = async () => {
     if (!profile?.id) return
@@ -187,7 +196,7 @@ export default function ProfileScreen() {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       full_name: profile?.full_name ?? '',
-      commercial_name: profile?.commercial_name ?? '',
+      professional_name: profile?.professional_name ?? '',
       ordem_psicologos: profile?.ordem_psicologos ?? '',
       phone: profile?.phone ?? '',
       address: profile?.address ?? '',
@@ -206,6 +215,12 @@ export default function ProfileScreen() {
   })
 
   const onSubmit = async (data: ProfileFormData) => {
+    // Validate gender required
+    if (!selectedGenderId) {
+      setGenderError('Género é obrigatório')
+      return
+    }
+    setGenderError(null)
     try {
       // Convert birth_date from DD/MM/YYYY to YYYY-MM-DD for storage
       let birthDateISO: string | null = null
@@ -215,8 +230,8 @@ export default function ProfileScreen() {
       }
       await mutateAsync({
         full_name: data.full_name,
-        commercial_name: data.commercial_name || null,
-        gender_id: selectedGenderId || null,
+        professional_name: data.professional_name || null,
+        gender_id: selectedGenderId,
         ordem_psicologos: data.ordem_psicologos || null,
         phone: data.phone || null,
         address: data.address || null,
@@ -284,6 +299,46 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
+        {/* Acesso */}
+        <Text style={sectionStyle}>Acesso à conta</Text>
+
+        {/* Email — read-only display */}
+        <View style={{ marginBottom: theme.spacing.md }}>
+          <Text style={fieldLabel}>E-mail de login *</Text>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center',
+            borderWidth: 1.5, borderColor: theme.colors.border,
+            borderRadius: theme.radius.md, paddingHorizontal: 14, minHeight: 52,
+            backgroundColor: theme.colors.surface, gap: 10,
+          }}>
+            <Ionicons name="mail-outline" size={18} color={theme.colors.text.tertiary} />
+            <Text style={{ fontSize: 15, color: theme.colors.text.secondary, flex: 1 }}>
+              {authEmail || '...'}
+            </Text>
+          </View>
+          <Text style={{ fontSize: 11, color: theme.colors.text.tertiary, marginTop: 4 }}>
+            Para alterar o e-mail, entre em contacto com o suporte.
+          </Text>
+        </View>
+
+        {/* Password change */}
+        <TouchableOpacity
+          onPress={() => router.push('/(app)/settings/change-password')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            borderWidth: 1.5, borderColor: theme.colors.border,
+            borderRadius: theme.radius.md, paddingHorizontal: 14, minHeight: 52,
+            backgroundColor: theme.colors.surface, marginBottom: theme.spacing.md,
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="lock-closed-outline" size={18} color={theme.colors.text.tertiary} />
+            <Text style={{ fontSize: 15, color: theme.colors.text.primary }}>Alterar senha</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
+        </TouchableOpacity>
+
         {/* Dados pessoais */}
         <Text style={sectionStyle}>Dados pessoais</Text>
 
@@ -295,20 +350,25 @@ export default function ProfileScreen() {
               error={errors.full_name?.message} />
           )}
         />
-        <Controller control={control} name="commercial_name"
+        <Controller control={control} name="professional_name"
           render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Nome profissional" placeholder="Nome usado em mensagens aos pacientes (ex: Ana Silva)"
+            <Input label="Nome profissional" placeholder="Nome exibido nas mensagens aos pacientes (ex: Ana Silva)"
               leftIcon="briefcase-outline" autoCapitalize="words"
               onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
           )}
         />
 
-        {/* Género/Sexo — dropdown */}
+        {/* Género/Sexo — dropdown (obrigatório) */}
         <GenderDropdown
           genders={genders}
           value={selectedGenderId}
-          onChange={setSelectedGenderId}
+          onChange={(v) => { setSelectedGenderId(v); if (v) setGenderError(null) }}
         />
+        {genderError && (
+          <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: -theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+            {genderError}
+          </Text>
+        )}
 
         <Controller control={control} name="ordem_psicologos"
           render={({ field: { onChange, onBlur, value } }) => (

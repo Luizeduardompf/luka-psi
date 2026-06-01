@@ -60,7 +60,7 @@ export default function SendFormScreen() {
 
   // Tratamento Dr./Dra. baseado no gênero do psicólogo
   const pronoun = getPronounTreatment(genders, profile?.gender_id)
-  const psicologoDisplayName = `${pronoun} ${profile?.commercial_name ?? profile?.preferred_name ?? profile?.full_name ?? ''}`
+  const psicologoDisplayName = `${pronoun} ${profile?.professional_name ?? profile?.full_name ?? ''}`.trim()
 
   const [step, setStep] = useState<Step>(1)
   const [selectedTemplate, setSelectedTemplate] = useState<FormTemplate | null>(null)

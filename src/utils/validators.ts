@@ -91,7 +91,7 @@ export const profileSchema = z.object({
     .string()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo'),
-  commercial_name: z.string().optional().or(z.literal('')),
+  professional_name: z.string().optional().or(z.literal('')),
   ordem_psicologos: z.string().optional().or(z.literal('')),
   phone: z.string().optional().or(z.literal('')),
   address: z.string().optional().or(z.literal('')),
@@ -100,14 +100,10 @@ export const profileSchema = z.object({
   country: z.string().optional().or(z.literal('')),
   nif: z
     .string()
-    .optional()
-    .or(z.literal(''))
+    .min(1, 'CPF ou NIF é obrigatório')
     .refine(
-      (v) => {
-        if (!v || v.replace(/\D/g, '').length === 0) return true
-        return isValidCpf(v) || isValidNif(v)
-      },
-      { message: 'CPF ou NIF inválido' },
+      (v) => isValidCpf(v) || isValidNif(v),
+      { message: 'CPF ou NIF inválido. Verifique o número informado.' },
     ),
   birth_date: z
     .string()
@@ -224,3 +220,15 @@ export type SignUpFormData = z.infer<typeof signUpSchema>
 export type PatientSchemaData = z.infer<typeof patientSchema>
 export type OnboardingFormData = z.infer<typeof onboardingSchema>
 export type ProfileFormData = z.infer<typeof profileSchema>
+
+// ─── Password change schema ────────────────────────────────────────────────────
+export const changePasswordSchema = z
+  .object({
+    password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+    confirmPassword: z.string().min(1, 'Confirmação obrigatória'),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: 'As senhas não coincidem',
+    path: ['confirmPassword'],
+  })
+export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>

@@ -146,7 +146,7 @@ export default function DashboardScreen() {
 
   // Greeting: pronome + nome profissional (ou nome completo como fallback)
   const pronoun = profile?.gender_id ? getPronounTreatment(genders, profile.gender_id) : ''
-  const professionalName = profile?.commercial_name || displayName
+  const professionalName = profile?.professional_name || displayName
   const greetingName = pronoun ? `${pronoun} ${professionalName}` : professionalName
   const firstName = greetingName.split(' ')[0] ?? greetingName
 
