@@ -608,7 +608,7 @@ export const PatientForm = memo(function PatientForm({
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     label="DDI"
-                    placeholder="+351"
+                    
                     keyboardType="phone-pad"
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -811,7 +811,7 @@ export const PatientForm = memo(function PatientForm({
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ width: 90 }}>
               <Controller control={control} name="spouse_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
-                <Input label="DDI" placeholder="+351" keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+                <Input label="DDI"  keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
               )} />
             </View>
             <View style={{ flex: 1 }}>
@@ -861,7 +861,7 @@ export const PatientForm = memo(function PatientForm({
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ width: 90 }}>
               <Controller control={control} name="tutor_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
-                <Input label="DDI" placeholder="+351" keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+                <Input label="DDI"  keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
               )} />
             </View>
             <View style={{ flex: 1 }}>
@@ -1030,7 +1030,7 @@ export const PatientForm = memo(function PatientForm({
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ width: 90 }}>
               <Controller control={control} name="emergency_contact_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
-                <Input label="DDI" placeholder="+351" keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+                <Input label="DDI"  keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
               )} />
             </View>
             <View style={{ flex: 1 }}>

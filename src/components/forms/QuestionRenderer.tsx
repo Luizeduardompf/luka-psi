@@ -21,16 +21,56 @@ interface Props {
   response: FormResponse | null
   onChange: (response: Partial<FormResponse>) => void
   isReadOnly?: boolean
+  error?: string | null
 }
 
-export function QuestionRenderer({ question, response, onChange, isReadOnly = false }: Props) {
+// Converte DD/MM/AAAA → YYYY-MM-DD (retorna null se inválido)
+export function parseDateDMY(value: string): string | null {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return null
+  const [, d, m, y] = match
+  const date = new Date(`${y}-${m}-${d}`)
+  if (isNaN(date.getTime())) return null
+  // Valida que os valores fazem sentido (evita 31/02)
+  if (date.getFullYear() !== parseInt(y) ||
+      date.getMonth() + 1 !== parseInt(m) ||
+      date.getDate() !== parseInt(d)) return null
+  return `${y}-${m}-${d}`
+}
+
+export function QuestionRenderer({ question, response, onChange, isReadOnly = false, error }: Props) {
   const [scaleValue, setScaleValue] = useState<number | null>(
     response?.answer_number ?? null,
   )
+  const [dateInput, setDateInput] = useState(
+    response?.answer_date
+      ? (() => {
+          // Se já está em ISO (YYYY-MM-DD), converte para exibição DD/MM/AAAA
+          const m = response.answer_date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+          return m ? `${m[3]}/${m[2]}/${m[1]}` : response.answer_date
+        })()
+      : ''
+  )
+  const [dateError, setDateError] = useState<string | null>(null)
 
   const handleText = (v: string) => onChange({ answer_text: v })
   const handleNumber = (v: string) => onChange({ answer_number: parseFloat(v) || null })
-  const handleDate = (v: string) => onChange({ answer_date: v })
+  const handleDate = (v: string) => {
+    setDateInput(v)
+    setDateError(null)
+    if (!v.trim()) {
+      onChange({ answer_date: null as unknown as string })
+      return
+    }
+    const iso = parseDateDMY(v)
+    if (iso) {
+      onChange({ answer_date: iso })
+    } else if (v.length === 10) {
+      // Só mostra erro quando já digitou os 10 caracteres
+      setDateError('Data inválida. Use o formato DD/MM/AAAA.')
+      onChange({ answer_date: null as unknown as string })
+    }
+  }
   const handleBoolean = (v: boolean) => onChange({ answer_boolean: v })
 
   const handleSingleChoice = (label: string) => {
@@ -123,15 +163,23 @@ export function QuestionRenderer({ question, response, onChange, isReadOnly = fa
       )}
 
       {question.type === 'date' && (
-        <TextInput
-          value={response?.answer_date ?? ''}
-          onChangeText={handleDate}
-          editable={!isReadOnly}
-          style={inputStyle}
-          placeholder="DD/MM/AAAA"
-          placeholderTextColor={theme.colors.text.tertiary}
-          keyboardType="numbers-and-punctuation"
-        />
+        <>
+          <TextInput
+            value={dateInput}
+            onChangeText={handleDate}
+            editable={!isReadOnly}
+            style={[inputStyle, (dateError || error) ? { borderColor: theme.colors.error } : undefined]}
+            placeholder="DD/MM/AAAA"
+            placeholderTextColor={theme.colors.text.tertiary}
+            keyboardType="numbers-and-punctuation"
+            maxLength={10}
+          />
+          {(dateError || error) && (
+            <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: 4 }}>
+              {dateError ?? error}
+            </Text>
+          )}
+        </>
       )}
 
       {question.type === 'boolean' && (
@@ -357,6 +405,12 @@ export function QuestionRenderer({ question, response, onChange, isReadOnly = fa
             </Text>
           </View>
         </View>
+      )}
+      {/* Erro de validação externo (ex: obrigatório) */}
+      {error && question.type !== 'date' && (
+        <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: 6 }}>
+          {error}
+        </Text>
       )}
     </View>
   )
