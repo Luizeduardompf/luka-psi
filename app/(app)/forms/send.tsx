@@ -2,7 +2,7 @@
  * Fluxo de envio de formulário para paciente — 7 etapas.
  * Parâmetros de rota: ?patientId=...
  */
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
   Linking,
   Clipboard,
 } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { theme } from '@/constants/theme'
@@ -84,6 +84,20 @@ export default function SendFormScreen() {
     id: string
     token: string
   } | null>(null)
+
+  // Reset ao entrar na tela — garante que começa sempre no step 1
+  useFocusEffect(useCallback(() => {
+    setStep(1)
+    setSelectedTemplate(null)
+    setPassword('')
+    setShowPassword(true)
+    setHasExpiry(false)
+    setExpiryDate('')
+    setCustomMessage(DEFAULT_SEND_MESSAGE)
+    setSentSubmission(null)
+    setExtraSections([])
+    setExpiryDateError('')
+  }, []))
   const [extraSections, setExtraSections] = useState<
     Array<{
       title: string
