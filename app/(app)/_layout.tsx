@@ -42,22 +42,22 @@ export default function AppLayout() {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 4,
+          height: 56,
+          paddingBottom: 6,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          ...theme.typography.caption,
+          fontWeight: '500',
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Início',
+          title: 'Inicio',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
+            <Ionicons name="grid-outline" size={size} color={color} />
           ),
         }}
       />
@@ -71,18 +71,34 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
-        name="forms"
+        name="agenda"
         options={{
-          title: 'Formulários',
+          title: 'Agenda',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text-outline" size={size} color={color} />
+            <Ionicons name="calendar-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
+        name="menu"
+        options={{
+          title: 'Menu',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="menu-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      {/* Hidden tabs - accessible via navigation but not shown in tab bar */}
+      <Tabs.Screen
         name="settings"
         options={{
-          href: null, // Removido do tab bar — acessível via ícone na tela Início
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="forms"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

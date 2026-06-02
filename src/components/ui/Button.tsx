@@ -27,21 +27,21 @@ const variantStyles: Record<
   ButtonVariant,
   { bg: string; text: string; border?: string }
 > = {
-  primary: { bg: theme.colors.primary, text: '#FFFFFF' },
-  secondary: { bg: theme.colors.secondary, text: '#FFFFFF' },
+  primary: { bg: theme.colors.primary, text: theme.colors.text.inverse },
+  secondary: { bg: theme.colors.surfaceSecondary, text: theme.colors.text.primary },
   outline: {
     bg: 'transparent',
     text: theme.colors.primary,
-    border: theme.colors.primary,
+    border: theme.colors.border,
   },
   ghost: { bg: 'transparent', text: theme.colors.primary },
-  danger: { bg: theme.colors.error, text: '#FFFFFF' },
+  danger: { bg: theme.colors.error, text: theme.colors.text.inverse },
 }
 
 const sizeStyles: Record<ButtonSize, { py: number; px: number; fontSize: number; radius: number }> = {
-  sm: { py: 8, px: 14, fontSize: 14, radius: theme.radius.sm },
-  md: { py: 14, px: 20, fontSize: 16, radius: theme.radius.lg },
-  lg: { py: 18, px: 24, fontSize: 17, radius: theme.radius.xl },
+  sm: { py: 8, px: 14, fontSize: 13, radius: theme.radius.sm },
+  md: { py: 12, px: 18, fontSize: 14, radius: theme.radius.md },
+  lg: { py: 16, px: 24, fontSize: 15, radius: theme.radius.lg },
 }
 
 export const Button = memo(function Button({
@@ -65,7 +65,7 @@ export const Button = memo(function Button({
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.75}
+      activeOpacity={0.8}
       style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -77,20 +77,15 @@ export const Button = memo(function Button({
         paddingHorizontal: ss.px,
         borderWidth: vs.border ? 1.5 : 0,
         borderColor: vs.border ?? 'transparent',
-        opacity: isDisabled ? 0.55 : 1,
+        opacity: isDisabled ? 0.5 : 1,
         alignSelf: fullWidth ? 'stretch' : 'flex-start',
-        ...(variant === 'primary' && !isDisabled
-          ? theme.shadow.sm
-          : undefined),
+        ...(variant === 'primary' && !isDisabled ? theme.shadow.sm : undefined),
         ...style,
       }}
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={vs.text}
-        />
+        <ActivityIndicator size="small" color={vs.text} />
       ) : (
         <>
           {leftIcon && <View>{leftIcon}</View>}
@@ -98,8 +93,8 @@ export const Button = memo(function Button({
             style={{
               color: vs.text,
               fontSize: ss.fontSize,
-              fontWeight: '600',
-              letterSpacing: 0.2,
+              fontWeight: '500',
+              letterSpacing: 0.1,
             }}
           >
             {title}

@@ -1,21 +1,61 @@
 export const theme = {
   colors: {
-    primary: '#7C3AED',
-    primaryLight: '#EDE9FE',
-    primaryDark: '#5B21B6',
-    secondary: '#06B6D4',
-    background: '#F8F7FF',
+    // Brand - warmer purple (Indigo-based)
+    primary: '#6366F1',
+    primaryLight: '#EEF2FF',
+    primaryDark: '#4338CA',
+    primaryMuted: '#C7D2FE',
+
+    // Accent
+    accent: '#0EA5E9',
+    accentLight: '#E0F2FE',
+
+    // Warm neutrals (professional feel)
+    background: '#FAFAF9',
     surface: '#FFFFFF',
-    surfaceSecondary: '#F3F4F6',
+    surfaceSecondary: '#F5F5F4',
+    surfaceTertiary: '#E7E5E4',
+
+    // Text - warm grays
     text: {
-      primary: '#111827',
-      secondary: '#6B7280',
-      tertiary: '#9CA3AF',
+      primary: '#1C1917',
+      secondary: '#57534E',
+      tertiary: '#A8A29E',
+      inverse: '#FFFFFF',
     },
-    border: '#E5E7EB',
-    success: '#10B981',
+
+    // Borders
+    border: '#E7E5E4',
+    borderLight: '#F5F5F4',
+
+    // Semantic
+    success: '#22C55E',
+    successLight: '#DCFCE7',
     warning: '#F59E0B',
+    warningLight: '#FEF3C7',
     error: '#EF4444',
+    errorLight: '#FEE2E2',
+    info: '#3B82F6',
+    infoLight: '#DBEAFE',
+  },
+  typography: {
+    // Display - for hero numbers/stats
+    display: { fontSize: 36, fontWeight: '700' as const, letterSpacing: -1, lineHeight: 40 },
+
+    // Headings
+    h1: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.5, lineHeight: 34 },
+    h2: { fontSize: 22, fontWeight: '600' as const, letterSpacing: -0.3, lineHeight: 28 },
+    h3: { fontSize: 18, fontWeight: '600' as const, letterSpacing: -0.2, lineHeight: 24 },
+
+    // Body
+    body: { fontSize: 15, fontWeight: '400' as const, letterSpacing: 0, lineHeight: 22 },
+    bodyMedium: { fontSize: 15, fontWeight: '500' as const, letterSpacing: 0, lineHeight: 22 },
+    bodySmall: { fontSize: 13, fontWeight: '400' as const, letterSpacing: 0, lineHeight: 18 },
+
+    // UI elements
+    caption: { fontSize: 12, fontWeight: '400' as const, letterSpacing: 0.2, lineHeight: 16 },
+    label: { fontSize: 13, fontWeight: '500' as const, letterSpacing: 0.1, lineHeight: 18 },
+    overline: { fontSize: 11, fontWeight: '600' as const, letterSpacing: 0.8, lineHeight: 14 },
   },
   spacing: {
     xs: 4,
@@ -26,26 +66,33 @@ export const theme = {
     xxl: 48,
   },
   radius: {
-    sm: 8,
-    md: 12,
-    lg: 16,
-    xl: 24,
+    sm: 6,
+    md: 10,
+    lg: 12,
+    xl: 16,
     full: 9999,
   },
   shadow: {
     sm: {
-      shadowColor: '#7C3AED',
+      shadowColor: '#1C1917',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.06,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOpacity: 0.04,
+      shadowRadius: 3,
+      elevation: 1,
     },
     md: {
-      shadowColor: '#7C3AED',
+      shadowColor: '#1C1917',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    lg: {
+      shadowColor: '#1C1917',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.08,
-      shadowRadius: 12,
-      elevation: 4,
+      shadowRadius: 16,
+      elevation: 5,
     },
   },
 } as const
