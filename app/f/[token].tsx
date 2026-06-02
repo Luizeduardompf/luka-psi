@@ -89,31 +89,47 @@ export default function PublicFormPage() {
   useEffect(() => { responsesRef.current = responses }, [responses])
   useEffect(() => { submissionRef.current = submission }, [submission])
 
+  // Flush imediato (para beforeunload — usa fetch sync ou beacon)
+  const flushDirty = useCallback(async () => {
+    const sub = submissionRef.current
+    if (!sub?.id || dirtyRef.current.size === 0) return
+    const toSave = Array.from(dirtyRef.current)
+    dirtyRef.current.clear()
+    await Promise.all(toSave.map((qId) => {
+      const r = responsesRef.current.get(qId)
+      if (!r) return Promise.resolve()
+      return formsService.saveResponse({
+        submission_id: sub.id,
+        question_id: qId,
+        answer_text: r.answer_text ?? null,
+        answer_options: r.answer_options ?? null,
+        answer_number: r.answer_number ?? null,
+        answer_date: r.answer_date ?? null,
+        answer_boolean: r.answer_boolean ?? null,
+      })
+    }))
+  }, [])
+
   const scheduleBatchSave = useCallback(() => {
     if (batchSaveTimer.current) clearTimeout(batchSaveTimer.current)
     batchSaveTimer.current = setTimeout(async () => {
-      const sub = submissionRef.current
-      if (!sub?.id || dirtyRef.current.size === 0) return
       setSaveStatus('saving')
-      const toSave = Array.from(dirtyRef.current)
-      dirtyRef.current.clear()
-      for (const qId of toSave) {
-        const r = responsesRef.current.get(qId)
-        if (!r) continue
-        await formsService.saveResponse({
-          submission_id: sub.id,
-          question_id: qId,
-          answer_text: r.answer_text ?? null,
-          answer_options: r.answer_options ?? null,
-          answer_number: r.answer_number ?? null,
-          answer_date: r.answer_date ?? null,
-          answer_boolean: r.answer_boolean ?? null,
-        })
-      }
+      await flushDirty()
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2000)
-    }, 5000)
-  }, [])
+    }, 2000) // 2s de inatividade
+  }, [flushDirty])
+
+  // Salva ao fechar/recarregar a aba (web)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    const handleUnload = () => {
+      if (batchSaveTimer.current) clearTimeout(batchSaveTimer.current)
+      void flushDirty()
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    return () => window.removeEventListener('beforeunload', handleUnload)
+  }, [flushDirty])
 
   useEffect(() => {
     if (!token) {

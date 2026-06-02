@@ -184,7 +184,7 @@ export function PatientFormsTab({ patientId, patientName }: Props) {
   return (
     <View style={{ flex: 1 }}>
       {/* Botão enviar */}
-      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 }}>
         <Button
           title="Enviar Formulário"
           leftIcon={<Ionicons name="send-outline" size={18} color="#FFF" />}
