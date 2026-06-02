@@ -1,8 +1,29 @@
 import { Tabs, Redirect } from 'expo-router'
 import { View, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { StackActions } from '@react-navigation/native'
 import { useSessionStore } from '@/stores/session.store'
 import { theme } from '@/constants/theme'
+
+/**
+ * Cria um listener que faz pop-to-top na stack interna do tab ao ser pressionado.
+ * Comportamento standard (Instagram, Gmail, etc.):
+ * - Tap num tab → vai sempre para a raiz desse tab
+ */
+function makeTabResetListener(tabName: string) {
+  return ({ navigation, route }: { navigation: any; route: any }) => ({
+    tabPress: () => {
+      const state = navigation.getState()
+      const tabRoute = state?.routes?.find((r: any) => r.name === route.name)
+      if (tabRoute?.state && (tabRoute.state.index ?? 0) > 0) {
+        navigation.dispatch({
+          ...StackActions.popToTop(),
+          target: tabRoute.state.key,
+        })
+      }
+    },
+  })
+}
 
 export default function AppLayout() {
   const { session, profile, isInitialized } = useSessionStore()
@@ -69,6 +90,7 @@ export default function AppLayout() {
             <Ionicons name="people-outline" size={size} color={color} />
           ),
         }}
+        listeners={makeTabResetListener('patients')}
       />
       <Tabs.Screen
         name="agenda"
@@ -78,6 +100,7 @@ export default function AppLayout() {
             <Ionicons name="calendar-outline" size={size} color={color} />
           ),
         }}
+        listeners={makeTabResetListener('agenda')}
       />
       <Tabs.Screen
         name="menu"
@@ -87,6 +110,7 @@ export default function AppLayout() {
             <Ionicons name="menu-outline" size={size} color={color} />
           ),
         }}
+        listeners={makeTabResetListener('menu')}
       />
       {/* Hidden tabs - accessible via navigation but not shown in tab bar */}
       <Tabs.Screen
