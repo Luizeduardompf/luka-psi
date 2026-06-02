@@ -89,7 +89,6 @@ export function PatientFormsTab({ patientId, patientName }: Props) {
                     fontWeight: '700',
                     color: theme.colors.text.primary,
                   }}
-                  numberOfLines={1}
                 >
                   {snapshot.template_title}
                 </Text>

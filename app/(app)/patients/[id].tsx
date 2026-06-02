@@ -8,7 +8,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Avatar } from '@/components/ui/Avatar'
@@ -221,8 +221,16 @@ export default function PatientDetailScreen() {
   const insets = useSafeAreaInsets()
   const [editVisible, setEditVisible] = useState(false)
   const validTabs: ActiveTab[] = ['info', 'sessions', 'forms', 'attachments']
-  const [activeTab, setActiveTab] = useState<ActiveTab>(
-    validTabs.includes(initialTab as ActiveTab) ? (initialTab as ActiveTab) : 'info'
+  const [activeTab, setActiveTab] = useState<ActiveTab>('info')
+
+  // Ao ganhar foco: reseta para 'info' excepto se vier com param `tab` explícito (pilha)
+  useFocusEffect(
+    useCallback(() => {
+      const target = validTabs.includes(initialTab as ActiveTab)
+        ? (initialTab as ActiveTab)
+        : 'info'
+      setActiveTab(target)
+    }, [initialTab])
   )
 
   const { data: patient, isLoading, refetch } = usePatient(id)
