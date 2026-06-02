@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback, useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -302,11 +302,13 @@ export const PatientForm = memo(function PatientForm({
 
       // Spouse
       spouse_name: initialData?.spouse_name ?? '',
+      spouse_phone_ddi: initialData?.spouse_phone_ddi ?? '',
       spouse_phone: initialData?.spouse_phone ?? '',
       spouse_email: initialData?.spouse_email ?? '',
 
       // Tutor
       tutor_name: initialData?.tutor_name ?? '',
+      tutor_phone_ddi: initialData?.tutor_phone_ddi ?? '',
       tutor_phone: initialData?.tutor_phone ?? '',
       tutor_email: initialData?.tutor_email ?? '',
 
@@ -315,11 +317,13 @@ export const PatientForm = memo(function PatientForm({
 
       // Emergency contact
       emergency_contact_name: initialData?.emergency_contact_name ?? '',
+      emergency_contact_phone_ddi: initialData?.emergency_contact_phone_ddi ?? '',
       emergency_contact_phone: initialData?.emergency_contact_phone ?? '',
 
       // Health coverage
       insurer_id: initialData?.insurer_id ?? '',
       plan_id: initialData?.plan_id ?? '',
+      plan_name: initialData?.plan_name ?? '',
       sns_user_number: initialData?.sns_user_number ?? '',
       local_protocol: initialData?.local_protocol ?? '',
 
@@ -339,6 +343,19 @@ export const PatientForm = memo(function PatientForm({
   const dobValue = watch('date_of_birth')
   const cpfValue = watch('cpf')
   const nifValue = watch('nif')
+  const countryIdValue = watch('country_id')
+
+  // Auto-fill DDI when country changes
+  useEffect(() => {
+    if (!countryIdValue || !countries?.length) return
+    const country = countries.find((c) => c.id === countryIdValue)
+    if (!country?.ddi) return
+    const ddi = country.ddi.startsWith('+') ? country.ddi : `+${country.ddi}`
+    setValue('phone_ddi', ddi)
+    setValue('spouse_phone_ddi', ddi)
+    setValue('tutor_phone_ddi', ddi)
+    setValue('emergency_contact_phone_ddi', ddi)
+  }, [countryIdValue, countries, setValue])
 
   const handleDateChange = useCallback(
     (_: unknown, selectedDate?: Date) => {
@@ -607,7 +624,7 @@ export const PatientForm = memo(function PatientForm({
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     label="Telefone"
-                    placeholder="912 345 678"
+                    placeholder="Ex: 912 345 678"
                     leftIcon="call-outline"
                     keyboardType="phone-pad"
                     onChangeText={(v) => onChange(maskPhone(v))}
@@ -791,22 +808,18 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="spouse_phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Contacto"
-                placeholder="(11) 99999-9999"
-                leftIcon="call-outline"
-                keyboardType="phone-pad"
-                onChangeText={(v) => onChange(maskPhone(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.spouse_phone?.message}
-              />
-            )}
-          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ width: 90 }}>
+              <Controller control={control} name="spouse_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="DDI" placeholder="+351" keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="spouse_phone" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Contacto" placeholder="Ex: 912 345 678" leftIcon="call-outline" keyboardType="phone-pad" onChangeText={(v) => onChange(maskPhone(v))} onBlur={onBlur} value={value ?? ''} error={errors.spouse_phone?.message} />
+              )} />
+            </View>
+          </View>
           <Controller
             control={control}
             name="spouse_email"
@@ -845,22 +858,18 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="tutor_phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Contacto do responsável"
-                placeholder="(11) 99999-9999"
-                leftIcon="call-outline"
-                keyboardType="phone-pad"
-                onChangeText={(v) => onChange(maskPhone(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.tutor_phone?.message}
-              />
-            )}
-          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ width: 90 }}>
+              <Controller control={control} name="tutor_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="DDI" placeholder="+351" keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="tutor_phone" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Contacto do responsável" placeholder="Ex: 912 345 678" leftIcon="call-outline" keyboardType="phone-pad" onChangeText={(v) => onChange(maskPhone(v))} onBlur={onBlur} value={value ?? ''} error={errors.tutor_phone?.message} />
+              )} />
+            </View>
+          </View>
           <Controller
             control={control}
             name="tutor_email"
@@ -950,7 +959,7 @@ export const PatientForm = memo(function PatientForm({
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     label="Telefone"
-                    placeholder="(11) 99999-9999"
+                    placeholder="Ex: 351 912 345 678"
                     keyboardType="phone-pad"
                     onChangeText={(v) => onChange(maskPhone(v))}
                     onBlur={onBlur}
@@ -1018,22 +1027,18 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="emergency_contact_phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Telefone"
-                placeholder="(11) 99999-9999"
-                leftIcon="call-outline"
-                keyboardType="phone-pad"
-                onChangeText={(v) => onChange(maskPhone(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.emergency_contact_phone?.message}
-              />
-            )}
-          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ width: 90 }}>
+              <Controller control={control} name="emergency_contact_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="DDI" placeholder="+351" keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="emergency_contact_phone" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Telefone" placeholder="Ex: 912 345 678" leftIcon="call-outline" keyboardType="phone-pad" onChangeText={(v) => onChange(maskPhone(v))} onBlur={onBlur} value={value ?? ''} error={errors.emergency_contact_phone?.message} />
+              )} />
+            </View>
+          </View>
         </Card>
 
         {/* ── COBERTURA / PROTOCOLO ── */}
@@ -1070,7 +1075,7 @@ export const PatientForm = memo(function PatientForm({
 
           <Controller
             control={control}
-            name="plan_id"
+            name="plan_name"
             render={({ field: { onChange, onBlur, value } }) => (
               <Input
                 label="Plano / Modalidade"
@@ -1080,7 +1085,7 @@ export const PatientForm = memo(function PatientForm({
                 onChangeText={onChange}
                 onBlur={onBlur}
                 value={value ?? ''}
-                error={errors.plan_id?.message}
+                error={errors.plan_name?.message}
               />
             )}
           />

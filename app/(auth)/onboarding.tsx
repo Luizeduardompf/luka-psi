@@ -190,7 +190,7 @@ export default function OnboardingScreen() {
           render={({ field: { onChange, onBlur, value } }) => (
             <Input
               label="Telefone"
-              placeholder="(11) 99999-9999"
+              placeholder="Ex: 351 912 345 678"
               leftIcon="call-outline"
               keyboardType="phone-pad"
               onChangeText={(v) => onChange(maskPhone(v))}

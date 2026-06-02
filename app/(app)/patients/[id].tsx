@@ -18,7 +18,7 @@ import { PatientForm } from '@/components/patients/PatientForm'
 import { PatientFormsTab } from '@/components/forms/PatientFormsTab'
 import { theme } from '@/constants/theme'
 import { usePatient, useUpdatePatient, useDeletePatient } from '@/hooks/usePatients'
-import { useCivilStatuses, useInsurers, usePlans } from '@/hooks/useLookups'
+import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
 import { formatDate, formatPhone, formatCpf, getPatientAvatarUrl } from '@/utils/format'
 
 function calcAge(dob: string | null | undefined): string | null {
@@ -35,7 +35,30 @@ import { PatientStatus } from '@/types/app.types'
 import { useGenders } from '@/hooks/useGenders'
 import { Toast, useToast } from '@/components/ui/Toast'
 
-type ActiveTab = 'info' | 'forms'
+type ActiveTab = 'info' | 'sessions' | 'forms' | 'attachments'
+
+const TAB_LABELS: Record<ActiveTab, string> = {
+  info: 'Informações',
+  sessions: 'Sessões',
+  forms: 'Formulários',
+  attachments: 'Anexos',
+}
+
+function PlaceholderTab({ icon, label, description }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; description: string }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md, padding: theme.spacing.xl }}>
+      <View style={{
+        width: 72, height: 72, borderRadius: theme.radius.xl,
+        backgroundColor: theme.colors.primaryLight,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name={icon} size={36} color={theme.colors.primary} />
+      </View>
+      <Text style={{ ...theme.typography.h3, color: theme.colors.text.primary }}>{label}</Text>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text.tertiary, textAlign: 'center' }}>{description}</Text>
+    </View>
+  )
+}
 
 function SectionTitle({ title }: { title: string }) {
   return (
@@ -139,6 +162,48 @@ function InfoRow({
   )
 }
 
+function ContactInfoRow({
+  icon,
+  label,
+  name,
+  phone,
+  email,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name']
+  label: string
+  name: string | null | undefined
+  phone?: string | null | undefined
+  email?: string | null | undefined
+}) {
+  if (!name) return null
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 8 }}>
+      <View style={{
+        width: 32, height: 32, borderRadius: theme.radius.sm,
+        backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name={icon} size={16} color={theme.colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginBottom: 2 }}>{label}</Text>
+        <Text style={{ fontSize: 15, color: theme.colors.text.primary, fontWeight: '500' }}>{name}</Text>
+        {phone ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+            <Ionicons name="call-outline" size={12} color={theme.colors.text.tertiary} />
+            <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary }}>{phone}</Text>
+          </View>
+        ) : null}
+        {email ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Ionicons name="mail-outline" size={12} color={theme.colors.text.tertiary} />
+            <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary }}>{email}</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  )
+}
+
 const GENDER_LABEL: Record<string, string> = {
   female_cis: 'Feminino (cisgênero)',
   male_cis: 'Masculino (cisgênero)',
@@ -164,6 +229,8 @@ export default function PatientDetailScreen() {
   const { data: civilStatuses = [] } = useCivilStatuses()
   const { data: insurers = [] } = useInsurers()
   const { data: plans = [] } = usePlans(patient?.insurer_id ?? undefined)
+  const { data: countries = [] } = useCountries()
+  const { data: practiceLocations = [] } = usePracticeLocations()
   const { toast, showToast, hideToast } = useToast()
 
   const handleDelete = useCallback(() => {
@@ -212,16 +279,20 @@ export default function PatientDetailScreen() {
             country_id: data.country_id || null,
             practice_location_id: data.practice_location_id || null,
             spouse_name: data.spouse_name || null,
+            spouse_phone_ddi: data.spouse_phone_ddi || null,
             spouse_phone: data.spouse_phone || null,
             spouse_email: data.spouse_email || null,
             tutor_name: data.tutor_name || null,
+            tutor_phone_ddi: data.tutor_phone_ddi || null,
             tutor_phone: data.tutor_phone || null,
             tutor_email: data.tutor_email || null,
             additional_contacts: data.additional_contacts ?? [],
             emergency_contact_name: data.emergency_contact_name || null,
+            emergency_contact_phone_ddi: data.emergency_contact_phone_ddi || null,
             emergency_contact_phone: data.emergency_contact_phone || null,
             insurer_id: data.insurer_id || null,
             plan_id: data.plan_id || null,
+            plan_name: data.plan_name || null,
             sns_user_number: data.sns_user_number || null,
             local_protocol: data.local_protocol || null,
             consent_rgpd: data.consent_rgpd ?? false,
@@ -328,7 +399,7 @@ export default function PatientDetailScreen() {
           borderBottomColor: theme.colors.border,
         }}
       >
-        {(['info', 'forms'] as ActiveTab[]).map((tab) => (
+        {(['info', 'sessions', 'forms', 'attachments'] as ActiveTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
@@ -344,7 +415,7 @@ export default function PatientDetailScreen() {
           >
             <Text
               style={{
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: '600',
                 color:
                   activeTab === tab
@@ -352,7 +423,7 @@ export default function PatientDetailScreen() {
                     : theme.colors.text.tertiary,
               }}
             >
-              {tab === 'info' ? 'Informações' : 'Formulários'}
+              {TAB_LABELS[tab]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -360,6 +431,10 @@ export default function PatientDetailScreen() {
 
       {activeTab === 'forms' ? (
         <PatientFormsTab patientId={patient.id} patientName={patient.full_name} />
+      ) : activeTab === 'sessions' ? (
+        <PlaceholderTab icon="calendar-outline" label="Sessões" description="O histórico de sessões estará disponível em breve." />
+      ) : activeTab === 'attachments' ? (
+        <PlaceholderTab icon="attach-outline" label="Anexos" description="Gestão de documentos e anexos estará disponível em breve." />
       ) : (
 
       <ScrollView
@@ -402,11 +477,21 @@ export default function PatientDetailScreen() {
               >
                 {patient.full_name}
               </Text>
-              <View style={{ alignItems: 'center', marginTop: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                 <Badge
                   label={statusLabelMap[status] ?? status}
                   variant={statusVariantMap[status] ?? 'default'}
                 />
+                {patient.practice_location_id && (() => {
+                  const loc = practiceLocations.find((l) => l.id === patient.practice_location_id)
+                  if (!loc) return null
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 2, borderRadius: theme.radius.full, backgroundColor: theme.colors.surfaceSecondary }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: loc.color }} />
+                      <Text style={{ ...theme.typography.caption, fontWeight: '500', color: theme.colors.text.secondary }}>{loc.name}</Text>
+                    </View>
+                  )
+                })()}
               </View>
             </View>
           </View>
@@ -421,7 +506,13 @@ export default function PatientDetailScreen() {
                 label="Nascimento"
                 value={`${formatDate(patient.date_of_birth)}${calcAge(patient.date_of_birth) ? ` · ${calcAge(patient.date_of_birth)}` : ''}`}
               />
-              <FichaItem label="Cidade" value={patient.city ?? '—'} />
+              <FichaItem
+                label="Cidade"
+                value={[
+                  patient.city,
+                  countries.find((c) => c.id === patient.country_id)?.name,
+                ].filter(Boolean).join(', ') || '—'}
+              />
             </View>
 
             <View style={{ flexDirection: 'row' }}>
@@ -458,17 +549,6 @@ export default function PatientDetailScreen() {
           </View>
         </Card>
 
-        {/* ── Sessões ─────────────────────────────────────────────── */}
-        <SectionTitle title="Sessões" />
-        <Card>
-          <View style={{ alignItems: 'center', paddingVertical: theme.spacing.lg, gap: 8 }}>
-            <Ionicons name="calendar-outline" size={36} color={theme.colors.text.tertiary} />
-            <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary, textAlign: 'center' }}>
-              Histórico de sessões em breve.{'\n'}Esta funcionalidade está sendo desenvolvida.
-            </Text>
-          </View>
-        </Card>
-
         {/* ── Contato ──────────────────────────────────────────────── */}
         <SectionTitle title="Contato" />
         <Card>
@@ -478,24 +558,19 @@ export default function PatientDetailScreen() {
           {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
             <>
               <Divider />
-              <InfoRow icon="alert-circle-outline" label="Contato de emergência" value={patient.emergency_contact_name} />
-              <InfoRow icon="call-outline" label="Tel. emergência" value={patient.emergency_contact_phone ? formatPhone(patient.emergency_contact_phone) : null} />
+              <ContactInfoRow icon="alert-circle-outline" label="Contato de emergência" name={patient.emergency_contact_name} phone={patient.emergency_contact_phone ? formatPhone(patient.emergency_contact_phone) : null} />
             </>
           )}
           {(patient.tutor_name || patient.tutor_phone || patient.tutor_email) && (
             <>
               <Divider />
-              <InfoRow icon="people-outline" label="Responsável" value={patient.tutor_name} />
-              <InfoRow icon="call-outline" label="Tel. responsável" value={patient.tutor_phone ? formatPhone(patient.tutor_phone) : null} />
-              <InfoRow icon="mail-outline" label="E-mail responsável" value={patient.tutor_email} />
+              <ContactInfoRow icon="people-outline" label="Responsável" name={patient.tutor_name} phone={patient.tutor_phone ? formatPhone(patient.tutor_phone) : null} email={patient.tutor_email} />
             </>
           )}
           {(patient.spouse_name || patient.spouse_phone || patient.spouse_email) && (
             <>
               <Divider />
-              <InfoRow icon="heart-outline" label="Cônjuge" value={patient.spouse_name} />
-              <InfoRow icon="call-outline" label="Tel. cônjuge" value={patient.spouse_phone ? formatPhone(patient.spouse_phone) : null} />
-              <InfoRow icon="mail-outline" label="E-mail cônjuge" value={patient.spouse_email} />
+              <ContactInfoRow icon="heart-outline" label="Cônjuge" name={patient.spouse_name} phone={patient.spouse_phone ? formatPhone(patient.spouse_phone) : null} email={patient.spouse_email} />
             </>
           )}
         </Card>
@@ -541,7 +616,7 @@ export default function PatientDetailScreen() {
         </Card>
 
         {/* ── Seguro / Plano ────────────────────────────────────────── */}
-        {(patient.insurer_id || patient.plan_id) && (
+        {(patient.insurer_id || patient.plan_name) && (
           <>
             <SectionTitle title="Seguro de saúde" />
             <Card>
@@ -552,8 +627,8 @@ export default function PatientDetailScreen() {
               />
               <InfoRow
                 icon="list-outline"
-                label="Plano"
-                value={patient.plan_id ? (plans.find((p) => p.id === patient.plan_id)?.name ?? null) : null}
+                label="Plano / Modalidade"
+                value={patient.plan_name ?? null}
               />
             </Card>
           </>

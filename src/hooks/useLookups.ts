@@ -15,7 +15,7 @@ export const lookupKeys = {
   practiceLocations: (userId: string) => ['practice_locations', userId] as const,
 }
 
-export interface CountryOption { id: string; name: string; code: string }
+export interface CountryOption { id: string; name: string; code: string; ddi: string }
 export interface PracticeLocationOption { id: string; name: string; color: string }
 
 export function useCountries() {
@@ -24,7 +24,7 @@ export function useCountries() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('countries')
-        .select('id, name, code')
+        .select('id, name, code, ddi')
         .eq('is_active', true)
         .order('sort_order')
       if (error) throw new Error(error.message)

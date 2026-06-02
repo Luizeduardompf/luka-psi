@@ -168,6 +168,7 @@ export const patientSchema = z
 
     // Spouse / partner
     spouse_name: z.string().optional().or(z.literal('')),
+    spouse_phone_ddi: z.string().optional().or(z.literal('')),
     spouse_phone: z.string().optional().or(z.literal('')),
     spouse_email: z
       .string()
@@ -177,6 +178,7 @@ export const patientSchema = z
 
     // Tutor
     tutor_name: z.string().optional().or(z.literal('')),
+    tutor_phone_ddi: z.string().optional().or(z.literal('')),
     tutor_phone: z.string().optional().or(z.literal('')),
     tutor_email: z
       .string()
@@ -189,11 +191,13 @@ export const patientSchema = z
 
     // Emergency contact
     emergency_contact_name: z.string().optional().or(z.literal('')),
+    emergency_contact_phone_ddi: z.string().optional().or(z.literal('')),
     emergency_contact_phone: z.string().optional().or(z.literal('')),
 
     // Health coverage
     insurer_id: z.string().optional().or(z.literal('')),
     plan_id: z.string().optional().or(z.literal('')),
+    plan_name: z.string().optional().or(z.literal('')),
     sns_user_number: z.string().optional().or(z.literal('')),
     local_protocol: z.string().optional().or(z.literal('')),
 

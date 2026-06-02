@@ -128,15 +128,19 @@ export type Database = {
           practice_location_id: string | null
           spouse_name: string | null
           spouse_phone: string | null
+          spouse_phone_ddi: string | null
           spouse_email: string | null
           tutor_name: string | null
           tutor_phone: string | null
           tutor_email: string | null
+          tutor_phone_ddi: string | null
           additional_contacts: Json | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           insurer_id: string | null
           plan_id: string | null
+          emergency_contact_phone_ddi: string | null
+          plan_name: string | null
           sns_user_number: string | null
           local_protocol: string | null
           consent_rgpd: boolean
@@ -170,15 +174,19 @@ export type Database = {
           practice_location_id?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
+          spouse_phone_ddi?: string | null
           spouse_email?: string | null
           tutor_name?: string | null
           tutor_phone?: string | null
           tutor_email?: string | null
+          tutor_phone_ddi?: string | null
           additional_contacts?: Json | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           insurer_id?: string | null
+          emergency_contact_phone_ddi?: string | null
           plan_id?: string | null
+          plan_name?: string | null
           sns_user_number?: string | null
           local_protocol?: string | null
           consent_rgpd?: boolean
@@ -212,15 +220,19 @@ export type Database = {
           practice_location_id?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
+          spouse_phone_ddi?: string | null
           spouse_email?: string | null
           tutor_name?: string | null
           tutor_phone?: string | null
           tutor_email?: string | null
+          tutor_phone_ddi?: string | null
           additional_contacts?: Json | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           insurer_id?: string | null
+          emergency_contact_phone_ddi?: string | null
           plan_id?: string | null
+          plan_name?: string | null
           sns_user_number?: string | null
           local_protocol?: string | null
           consent_rgpd?: boolean
