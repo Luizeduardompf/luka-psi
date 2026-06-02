@@ -270,7 +270,7 @@ export default function DashboardScreen() {
           <QuickActionChip
             label="Agenda"
             icon="calendar-outline"
-            onPress={() => router.push('/(app)/agenda')}
+            onPress={() => router.push('/(app)/agenda' as never)}
             disabled
           />
           <QuickActionChip
