@@ -137,15 +137,31 @@ export default function PatientsListScreen() {
           backgroundColor: theme.colors.background,
         }}
       >
-        <Text
-          style={{
-            ...theme.typography.h1,
-            color: theme.colors.text.primary,
-            marginBottom: theme.spacing.md,
-          }}
-        >
-          Pacientes
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+          <Text
+            style={{
+              ...theme.typography.h1,
+              color: theme.colors.text.primary,
+            }}
+          >
+            Pacientes
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/patients/new')}
+            activeOpacity={0.8}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: theme.colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...theme.shadow.sm,
+            }}
+          >
+            <Ionicons name="add" size={24} color={theme.colors.text.inverse} />
+          </TouchableOpacity>
+        </View>
 
         {/* Search bar */}
         <View
@@ -260,25 +276,6 @@ export default function PatientsListScreen() {
         />
       )}
 
-      {/* FAB */}
-      <TouchableOpacity
-        onPress={() => router.push('/(app)/patients/new')}
-        activeOpacity={0.85}
-        style={{
-          position: 'absolute',
-          right: theme.spacing.lg,
-          bottom: insets.bottom + theme.spacing.lg,
-          width: 52,
-          height: 52,
-          borderRadius: 26,
-          backgroundColor: theme.colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          ...theme.shadow.md,
-        }}
-      >
-        <Ionicons name="add" size={26} color={theme.colors.text.inverse} />
-      </TouchableOpacity>
     </View>
   )
 }

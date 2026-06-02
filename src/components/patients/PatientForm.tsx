@@ -24,7 +24,7 @@ import {
   EDUCATION_OPTIONS,
   Patient,
 } from '@/types/app.types'
-import { useCivilStatuses, useInsurers, usePlans } from '@/hooks/useLookups'
+import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
 import { useGenders } from '@/hooks/useGenders'
 
 interface PatientFormProps {
@@ -259,6 +259,8 @@ export const PatientForm = memo(function PatientForm({
   const { data: civilStatuses } = useCivilStatuses()
   const { data: insurers } = useInsurers()
   const { data: plans } = usePlans(selectedInsurerId || undefined)
+  const { data: countries = [] } = useCountries()
+  const { data: practiceLocations = [] } = usePracticeLocations()
   const { data: gendersData = [] } = useGenders()
 
   const {
@@ -295,6 +297,8 @@ export const PatientForm = memo(function PatientForm({
       billing_address: initialData?.billing_address ?? '',
       postal_code: initialData?.postal_code ?? '',
       city: initialData?.city ?? '',
+      country_id: initialData?.country_id ?? '',
+      practice_location_id: initialData?.practice_location_id ?? '',
 
       // Spouse
       spouse_name: initialData?.spouse_name ?? '',
@@ -379,6 +383,29 @@ export const PatientForm = memo(function PatientForm({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* ── LOCAL DE PRÁTICA ── */}
+        <SectionHeader title="Local de prática" />
+        <Card>
+          <Controller
+            control={control}
+            name="practice_location_id"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="Local de prática *"
+                options={practiceLocations.map((l) => ({ label: l.name, value: l.id }))}
+                value={value ?? ''}
+                onChange={onChange}
+                placeholder="Selecionar local..."
+              />
+            )}
+          />
+          {errors.practice_location_id && (
+            <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8 }}>
+              {errors.practice_location_id.message}
+            </Text>
+          )}
+        </Card>
+
         {/* ── IDENTIFICAÇÃO ── */}
         <SectionHeader title="Identificação" />
         <Card>
@@ -519,47 +546,19 @@ export const PatientForm = memo(function PatientForm({
           />
 
           {/* Status */}
-          <View>
-            <Text style={labelStyle}>Status</Text>
-            <Controller
-              control={control}
-              name="status"
-              render={({ field: { onChange, value } }) => (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {STATUS_OPTIONS.map((opt) => {
-                    const selected = value === opt.value
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        onPress={() => onChange(opt.value)}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 8,
-                          borderRadius: theme.radius.md,
-                          backgroundColor: selected
-                            ? theme.colors.primary
-                            : theme.colors.surfaceSecondary,
-                          alignItems: 'center',
-                          borderWidth: 1,
-                          borderColor: selected ? theme.colors.primary : theme.colors.border,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            fontWeight: selected ? '600' : '400',
-                            color: selected ? '#FFFFFF' : theme.colors.text.secondary,
-                          }}
-                        >
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
-              )}
-            />
-          </View>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="Status"
+                options={STATUS_OPTIONS}
+                value={value}
+                onChange={onChange}
+                placeholder="Selecionar status..."
+              />
+            )}
+          />
         </Card>
 
         {/* ── CONTACTO ── */}
@@ -752,6 +751,25 @@ export const PatientForm = memo(function PatientForm({
               />
             </View>
           </View>
+
+          <Controller
+            control={control}
+            name="country_id"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="País *"
+                options={countries.map((c) => ({ label: c.name, value: c.id }))}
+                value={value ?? ''}
+                onChange={onChange}
+                placeholder="Selecionar país..."
+              />
+            )}
+          />
+          {errors.country_id && (
+            <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8, marginBottom: 8 }}>
+              {errors.country_id.message}
+            </Text>
+          )}
         </Card>
 
         {/* ── CÔNJUGE / COMPANHEIR@ ── */}
@@ -1053,13 +1071,16 @@ export const PatientForm = memo(function PatientForm({
           <Controller
             control={control}
             name="plan_id"
-            render={({ field: { onChange, value } }) => (
-              <SelectDropdown
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
                 label="Plano / Modalidade"
-                options={planOptions}
+                placeholder="Ex: Saúde 24, Básico, Premium..."
+                leftIcon="list-outline"
+                autoCapitalize="words"
+                onChangeText={onChange}
+                onBlur={onBlur}
                 value={value ?? ''}
-                onChange={onChange}
-                placeholder="Sem plano específico"
+                error={errors.plan_id?.message}
               />
             )}
           />

@@ -163,6 +163,8 @@ export const patientSchema = z
     billing_address: z.string().optional().or(z.literal('')),
     postal_code: z.string().optional().or(z.literal('')),
     city: z.string().optional().or(z.literal('')),
+    country_id: z.string().min(1, 'País é obrigatório'),
+    practice_location_id: z.string().min(1, 'Local de prática é obrigatório'),
 
     // Spouse / partner
     spouse_name: z.string().optional().or(z.literal('')),

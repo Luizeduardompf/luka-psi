@@ -124,6 +124,8 @@ export type Database = {
           billing_address: string | null
           postal_code: string | null
           city: string | null
+          country_id: string | null
+          practice_location_id: string | null
           spouse_name: string | null
           spouse_phone: string | null
           spouse_email: string | null
@@ -164,6 +166,8 @@ export type Database = {
           billing_address?: string | null
           postal_code?: string | null
           city?: string | null
+          country_id?: string | null
+          practice_location_id?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
           spouse_email?: string | null
@@ -204,6 +208,8 @@ export type Database = {
           billing_address?: string | null
           postal_code?: string | null
           city?: string | null
+          country_id?: string | null
+          practice_location_id?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
           spouse_email?: string | null

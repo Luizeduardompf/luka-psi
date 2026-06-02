@@ -83,15 +83,17 @@ function StatCard({
   )
 }
 
-// ─── Quick action chip ─────────────────────────────────────────────────────────
-function QuickActionChip({
+// ─── Quick action ──────────────────────────────────────────────────────────────
+function QuickAction({
   label,
   icon,
+  color,
   onPress,
   disabled,
 }: {
   label: string
   icon: React.ComponentProps<typeof Ionicons>['name']
+  color: string
   onPress: () => void
   disabled?: boolean
 }) {
@@ -101,25 +103,32 @@ function QuickActionChip({
       disabled={disabled}
       activeOpacity={0.7}
       style={{
-        flexDirection: 'row',
+        flex: 1,
         alignItems: 'center',
-        gap: 6,
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: theme.radius.full,
-        backgroundColor: disabled ? theme.colors.surfaceSecondary : theme.colors.primary,
-        opacity: disabled ? 0.5 : 1,
+        gap: 8,
+        opacity: disabled ? 0.45 : 1,
       }}
     >
-      <Ionicons
-        name={icon}
-        size={16}
-        color={disabled ? theme.colors.text.tertiary : theme.colors.text.inverse}
-      />
+      <View
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: theme.radius.lg,
+          backgroundColor: color + '18',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1.5,
+          borderColor: color + '30',
+        }}
+      >
+        <Ionicons name={icon} size={24} color={color} />
+      </View>
       <Text
         style={{
-          ...theme.typography.label,
-          color: disabled ? theme.colors.text.tertiary : theme.colors.text.inverse,
+          ...theme.typography.caption,
+          fontWeight: '500',
+          color: theme.colors.text.secondary,
+          textAlign: 'center',
         }}
       >
         {label}
@@ -198,11 +207,11 @@ export default function DashboardScreen() {
   const pronoun = profile?.gender_id
     ? getPronounTreatment(genders, profile.gender_id)
     : ''
-  const professionalName = profile?.professional_name || displayName
-  const greetingName = pronoun
-    ? `${pronoun} ${professionalName}`
-    : professionalName
-  const firstName = greetingName.split(' ')[0] ?? greetingName
+  const rawName = profile?.professional_name || displayName
+  // Remove prefixos de título que possam vir no campo (ex: "Dr. Luiz" → "Luiz")
+  const nameWithoutPrefix = rawName.replace(/^(Dr[a]?\.?\s+|Prof\.?\s+)/i, '').trim()
+  const firstName = nameWithoutPrefix.split(' ')[0] || rawName
+  const greetingName = pronoun ? `${pronoun} ${firstName}` : firstName
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -250,35 +259,50 @@ export default function DashboardScreen() {
                   color: theme.colors.text.primary,
                 }}
               >
-                {firstName}
+                {greetingName}
               </Text>
             </View>
           </View>
+          {/* Right: notifications */}
+          <TouchableOpacity
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
         </View>
 
         {/* Quick Actions */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: theme.spacing.sm }}
-        >
-          <QuickActionChip
-            label="Novo Paciente"
-            icon="person-add-outline"
-            onPress={() => router.push('/(app)/patients/new')}
-          />
-          <QuickActionChip
-            label="Agenda"
-            icon="calendar-outline"
-            onPress={() => router.push('/(app)/agenda' as never)}
-            disabled
-          />
-          <QuickActionChip
-            label="Formularios"
-            icon="document-text-outline"
-            onPress={() => router.push('/(app)/forms')}
-          />
-        </ScrollView>
+        <Card>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+            <QuickAction
+              label="Novo Paciente"
+              icon="person-add"
+              color={theme.colors.primary}
+              onPress={() => router.push('/(app)/patients/new')}
+            />
+            <QuickAction
+              label="Agenda"
+              icon="calendar"
+              color={theme.colors.accent}
+              onPress={() => router.push('/(app)/agenda' as never)}
+              disabled
+            />
+            <QuickAction
+              label="Relatórios"
+              icon="bar-chart"
+              color={theme.colors.warning}
+              onPress={() => {}}
+              disabled
+            />
+          </View>
+        </Card>
 
         {/* Stats */}
         <View>
