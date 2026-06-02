@@ -79,6 +79,42 @@ export default function PublicFormPage() {
   const [requiredErrors, setRequiredErrors] = useState<Set<string>>(new Set())
   const [fieldErrors, setFieldErrors] = useState<Map<string, string>>(new Map())
 
+  // Auto-save: batch único após 5s de inatividade
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const dirtyRef = useRef<Set<string>>(new Set())       // questionIds com mudanças não salvas
+  const responsesRef = useRef(responses)                 // ref sempre actualizada
+  const submissionRef = useRef<typeof submission>(null)  // ref para submission
+  const batchSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { responsesRef.current = responses }, [responses])
+  useEffect(() => { submissionRef.current = submission }, [submission])
+
+  const scheduleBatchSave = useCallback(() => {
+    if (batchSaveTimer.current) clearTimeout(batchSaveTimer.current)
+    batchSaveTimer.current = setTimeout(async () => {
+      const sub = submissionRef.current
+      if (!sub?.id || dirtyRef.current.size === 0) return
+      setSaveStatus('saving')
+      const toSave = Array.from(dirtyRef.current)
+      dirtyRef.current.clear()
+      for (const qId of toSave) {
+        const r = responsesRef.current.get(qId)
+        if (!r) continue
+        await formsService.saveResponse({
+          submission_id: sub.id,
+          question_id: qId,
+          answer_text: r.answer_text ?? null,
+          answer_options: r.answer_options ?? null,
+          answer_number: r.answer_number ?? null,
+          answer_date: r.answer_date ?? null,
+          answer_boolean: r.answer_boolean ?? null,
+        })
+      }
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }, 5000)
+  }, [])
+
   useEffect(() => {
     if (!token) {
       setPageState('not_found')
@@ -211,13 +247,15 @@ export default function PublicFormPage() {
 
   const handleResponseChange = useCallback(
     (questionId: string, partial: Partial<FormResponse>) => {
-      // Apenas actualiza estado local — sem auto-save para evitar requests excessivos
       setResponses((prev) => {
         const updated = new Map(prev)
         updated.set(questionId, { ...(prev.get(questionId) ?? {}), ...partial, question_id: questionId })
         return updated
       })
-      // Limpa erro do campo ao editar
+      // Marca como dirty e agenda batch save
+      dirtyRef.current.add(questionId)
+      scheduleBatchSave()
+      // Limpa erros ao editar
       setFieldErrors((prev) => {
         if (!prev.has(questionId)) return prev
         const next = new Map(prev)
@@ -231,7 +269,7 @@ export default function PublicFormPage() {
         return next
       })
     },
-    [],
+    [scheduleBatchSave],
   )
 
   async function handleComplete() {
@@ -290,7 +328,11 @@ export default function PublicFormPage() {
 
     setIsSubmitting(true)
 
-    // Salvar todas as respostas de uma vez só no submit
+    // Cancelar batch save pendente — vamos salvar tudo agora
+    if (batchSaveTimer.current) clearTimeout(batchSaveTimer.current)
+    dirtyRef.current.clear()
+
+    // Salvar todas as respostas de uma vez no submit
     const allResponses = Array.from(responses.entries()).map(([questionId, r]) => ({
       ...(r as FormResponse),
       question_id: questionId,
@@ -737,6 +779,16 @@ export default function PublicFormPage() {
           {snap.expires_at && (
             <Text style={{ fontSize: 11, color: theme.colors.warning }}>
               Prazo: {new Date(snap.expires_at).toLocaleDateString('pt-BR')}
+            </Text>
+          )}
+          {saveStatus === 'saving' && (
+            <Text style={{ fontSize: 11, color: theme.colors.text.tertiary }}>
+              A guardar...
+            </Text>
+          )}
+          {saveStatus === 'saved' && (
+            <Text style={{ fontSize: 11, color: theme.colors.success }}>
+              ✓ Guardado
             </Text>
           )}
         </View>
