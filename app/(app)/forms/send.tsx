@@ -53,6 +53,17 @@ export default function SendFormScreen() {
   const insets = useSafeAreaInsets()
   const { profile } = useSessionStore()
 
+  const goToPatientForms = () => {
+    if (patientId) {
+      router.replace({
+        pathname: '/(app)/patients/[id]',
+        params: { id: patientId, tab: 'forms' },
+      })
+    } else {
+      router.back()
+    }
+  }
+
   const { data: patient } = usePatient(patientId ?? '')
   const { data: templates = [], isLoading: templatesLoading } = useFormTemplates()
   const { data: genders } = useGenders()
@@ -846,7 +857,7 @@ export default function SendFormScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <TouchableOpacity
             onPress={() => {
-              if (step === 1 || step === 7) router.back()
+              if (step === 1 || step === 7) goToPatientForms()
               else setStep((s) => (s - 1) as Step)
             }}
           >
@@ -951,7 +962,7 @@ export default function SendFormScreen() {
         >
           <Button
             title="Concluir"
-            onPress={() => router.back()}
+            onPress={goToPatientForms}
             fullWidth
           />
         </View>

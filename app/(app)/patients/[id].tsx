@@ -217,10 +217,13 @@ const GENDER_LABEL: Record<string, string> = {
 }
 
 export default function PatientDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>()
   const insets = useSafeAreaInsets()
   const [editVisible, setEditVisible] = useState(false)
-  const [activeTab, setActiveTab] = useState<ActiveTab>('info')
+  const validTabs: ActiveTab[] = ['info', 'sessions', 'forms', 'attachments']
+  const [activeTab, setActiveTab] = useState<ActiveTab>(
+    validTabs.includes(initialTab as ActiveTab) ? (initialTab as ActiveTab) : 'info'
+  )
 
   const { data: patient, isLoading, refetch } = usePatient(id)
   const updateMutation = useUpdatePatient(id)
