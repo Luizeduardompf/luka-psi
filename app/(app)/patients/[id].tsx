@@ -35,13 +35,94 @@ import { PatientStatus } from '@/types/app.types'
 import { useGenders } from '@/hooks/useGenders'
 import { Toast, useToast } from '@/components/ui/Toast'
 
-type ActiveTab = 'info' | 'sessions' | 'forms' | 'attachments'
+type ActiveTab = 'info' | 'sessions' | 'forms' | 'attachments' | 'financial'
 
 const TAB_LABELS: Record<ActiveTab, string> = {
   info: 'Informações',
   sessions: 'Sessões',
   forms: 'Formulários',
   attachments: 'Anexos',
+  financial: 'Financeiro',
+}
+
+function FinancialTab() {
+  // Valores placeholder — serão calculados a partir das sessões quando implementadas
+  const totalBilled  = 0
+  const totalPaid    = 0
+  const totalPending = 0
+  const balance      = totalPaid - totalBilled // negativo = devedor, positivo = crédito
+
+  const fmt = (v: number) =>
+    v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+  return (
+    <ScrollView
+      contentContainerStyle={{
+        padding: theme.spacing.md,
+        paddingBottom: 80,
+        gap: theme.spacing.md,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Saldo da conta-corrente */}
+      <View style={{
+        borderRadius: theme.radius.lg,
+        backgroundColor: balance < 0 ? theme.colors.errorLight : balance > 0 ? theme.colors.successLight : theme.colors.surfaceSecondary,
+        padding: theme.spacing.lg,
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+        ...theme.shadow.sm,
+      }}>
+        <Text style={{ ...theme.typography.overline, color: theme.colors.text.secondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+          Saldo Conta-Corrente
+        </Text>
+        <Text style={{
+          ...theme.typography.display,
+          fontSize: 36,
+          color: balance < 0 ? theme.colors.error : balance > 0 ? theme.colors.success : theme.colors.text.secondary,
+        }}>
+          {fmt(Math.abs(balance))}
+        </Text>
+        <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary }}>
+          {balance < 0 ? 'Em aberto (a receber)' : balance > 0 ? 'Crédito do paciente' : 'Sem saldo pendente'}
+        </Text>
+      </View>
+
+      {/* Demonstrativo */}
+      <Text style={{ ...theme.typography.overline, color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 2 }}>
+        Demonstrativo
+      </Text>
+      <Card>
+        <DemoRow label="Total faturado" value={fmt(totalBilled)} />
+        <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: theme.spacing.sm }} />
+        <DemoRow label="Total pago" value={fmt(totalPaid)} valueColor={theme.colors.success} />
+        <DemoRow label="Pendente de pagamento" value={fmt(totalPending)} valueColor={totalPending > 0 ? theme.colors.warning : theme.colors.text.secondary} />
+        <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: theme.spacing.sm }} />
+        <DemoRow label="Saldo" value={fmt(Math.abs(balance))} valueColor={balance < 0 ? theme.colors.error : theme.colors.success} bold />
+      </Card>
+
+      {/* Placeholder sessões */}
+      <Card>
+        <View style={{ alignItems: 'center', paddingVertical: theme.spacing.lg, gap: theme.spacing.sm }}>
+          <Ionicons name="receipt-outline" size={36} color={theme.colors.text.tertiary} />
+          <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary, textAlign: 'center' }}>
+            O histórico de cobranças por sessão{'\n'}estará disponível quando a agenda for implementada.
+          </Text>
+        </View>
+      </Card>
+    </ScrollView>
+  )
+}
+
+function DemoRow({ label, value, valueColor, bold }: { label: string; value: string; valueColor?: string; bold?: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 }}>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text.secondary, flex: 1 }}>{label}</Text>
+      <Text style={{ ...theme.typography.bodyMedium, color: valueColor ?? theme.colors.text.primary, fontWeight: bold ? '700' : '500' }}>
+        {value}
+      </Text>
+    </View>
+  )
 }
 
 function PlaceholderTab({ icon, label, description }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; description: string }) {
@@ -220,7 +301,7 @@ export default function PatientDetailScreen() {
   const { id, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>()
   const insets = useSafeAreaInsets()
   const [editVisible, setEditVisible] = useState(false)
-  const validTabs: ActiveTab[] = ['info', 'sessions', 'forms', 'attachments']
+  const validTabs: ActiveTab[] = ['info', 'sessions', 'forms', 'attachments', 'financial']
   const [activeTab, setActiveTab] = useState<ActiveTab>('info')
 
   // Ao ganhar foco: reseta para 'info' excepto se vier com param `tab` explícito (pilha)
@@ -410,7 +491,7 @@ export default function PatientDetailScreen() {
           borderBottomColor: theme.colors.border,
         }}
       >
-        {(['info', 'sessions', 'forms', 'attachments'] as ActiveTab[]).map((tab) => (
+        {(['info', 'sessions', 'forms', 'attachments', 'financial'] as ActiveTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
@@ -446,6 +527,8 @@ export default function PatientDetailScreen() {
         <PlaceholderTab icon="calendar-outline" label="Sessões" description="O histórico de sessões estará disponível em breve." />
       ) : activeTab === 'attachments' ? (
         <PlaceholderTab icon="attach-outline" label="Anexos" description="Gestão de documentos e anexos estará disponível em breve." />
+      ) : activeTab === 'financial' ? (
+        <FinancialTab />
       ) : (
 
       <ScrollView
