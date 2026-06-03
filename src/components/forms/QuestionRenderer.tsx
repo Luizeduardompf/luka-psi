@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
+  Platform,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { theme } from '@/constants/theme'
@@ -21,16 +22,75 @@ interface Props {
   response: FormResponse | null
   onChange: (response: Partial<FormResponse>) => void
   isReadOnly?: boolean
+  error?: string | null
 }
 
-export function QuestionRenderer({ question, response, onChange, isReadOnly = false }: Props) {
+// Converte DD/MM/AAAA → YYYY-MM-DD (retorna null se inválido)
+export function parseDateDMY(value: string): string | null {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!match) return null
+  const [, d, m, y] = match
+  const date = new Date(`${y}-${m}-${d}`)
+  if (isNaN(date.getTime())) return null
+  // Valida que os valores fazem sentido (evita 31/02)
+  if (date.getFullYear() !== parseInt(y) ||
+      date.getMonth() + 1 !== parseInt(m) ||
+      date.getDate() !== parseInt(d)) return null
+  return `${y}-${m}-${d}`
+}
+
+export function QuestionRenderer({ question, response, onChange, isReadOnly = false, error }: Props) {
   const [scaleValue, setScaleValue] = useState<number | null>(
     response?.answer_number ?? null,
   )
+  const [dateInput, setDateInput] = useState(
+    response?.answer_date
+      ? (() => {
+          // Se já está em ISO (YYYY-MM-DD), converte para exibição DD/MM/AAAA
+          const m = response.answer_date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+          return m ? `${m[3]}/${m[2]}/${m[1]}` : response.answer_date
+        })()
+      : ''
+  )
+  const [dateError, setDateError] = useState<string | null>(null)
 
   const handleText = (v: string) => onChange({ answer_text: v })
   const handleNumber = (v: string) => onChange({ answer_number: parseFloat(v) || null })
-  const handleDate = (v: string) => onChange({ answer_date: v })
+  const handleDate = (v: string) => {
+    // Bloqueia letras — só permite dígitos e /
+    const filtered = v.replace(/[^\d/]/g, '')
+    setDateInput(filtered)
+    setDateError(null)
+    if (!filtered.trim()) {
+      onChange({ answer_date: null as unknown as string })
+      return
+    }
+    const iso = parseDateDMY(filtered)
+    if (iso) {
+      onChange({ answer_date: iso })
+    } else if (filtered.replace(/\D/g, '').length === 8) {
+      setDateError('Data inválida. Verifique dia, mês e ano.')
+      onChange({ answer_date: null as unknown as string })
+    }
+  }
+
+  // Web: converte ISO para input type=date (YYYY-MM-DD) e vice-versa
+  const handleDateWeb = (iso: string) => {
+    if (!iso) {
+      onChange({ answer_date: null as unknown as string })
+      setDateInput('')
+      return
+    }
+    onChange({ answer_date: iso })
+    // Exibe DD/MM/AAAA no estado interno para consistência
+    const [y, m, d] = iso.split('-')
+    setDateInput(`${d}/${m}/${y}`)
+  }
+  // Valor para o input nativo web (YYYY-MM-DD)
+  const dateValueForWeb = (() => {
+    const iso = parseDateDMY(dateInput)
+    return iso ?? ''
+  })()
   const handleBoolean = (v: boolean) => onChange({ answer_boolean: v })
 
   const handleSingleChoice = (label: string) => {
@@ -123,15 +183,41 @@ export function QuestionRenderer({ question, response, onChange, isReadOnly = fa
       )}
 
       {question.type === 'date' && (
-        <TextInput
-          value={response?.answer_date ?? ''}
-          onChangeText={handleDate}
-          editable={!isReadOnly}
-          style={inputStyle}
-          placeholder="DD/MM/AAAA"
-          placeholderTextColor={theme.colors.text.tertiary}
-          keyboardType="numbers-and-punctuation"
-        />
+        <>
+          {Platform.OS === 'web' ? (
+            // Web: input type=date nativo — bloqueia letras, mostra seletor de calendário
+            <input
+              type="date"
+              disabled={isReadOnly}
+              value={dateValueForWeb}
+              onChange={(e) => handleDateWeb(e.target.value)}
+              style={{
+                ...inputStyle as React.CSSProperties,
+                width: '100%',
+                boxSizing: 'border-box',
+                borderColor: (dateError || error) ? theme.colors.error : (inputStyle as any).borderColor,
+                cursor: isReadOnly ? 'not-allowed' : 'pointer',
+              }}
+            />
+          ) : (
+            // Mobile: TextInput só aceita dígitos e /
+            <TextInput
+              value={dateInput}
+              onChangeText={handleDate}
+              editable={!isReadOnly}
+              style={[inputStyle, (dateError || error) ? { borderColor: theme.colors.error } : undefined]}
+              placeholder="DD/MM/AAAA"
+              placeholderTextColor={theme.colors.text.tertiary}
+              keyboardType="numeric"
+              maxLength={10}
+            />
+          )}
+          {(dateError || error) && (
+            <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: 4 }}>
+              {dateError ?? error}
+            </Text>
+          )}
+        </>
       )}
 
       {question.type === 'boolean' && (
@@ -357,6 +443,12 @@ export function QuestionRenderer({ question, response, onChange, isReadOnly = fa
             </Text>
           </View>
         </View>
+      )}
+      {/* Erro de validação externo (ex: obrigatório) */}
+      {error && question.type !== 'date' && (
+        <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: 6 }}>
+          {error}
+        </Text>
       )}
     </View>
   )

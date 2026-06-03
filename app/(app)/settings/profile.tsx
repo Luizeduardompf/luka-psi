@@ -380,7 +380,7 @@ export default function ProfileScreen() {
         />
         <Controller control={control} name="phone"
           render={({ field: { onChange, onBlur, value } }) => (
-            <Input label="Telefone" placeholder="(11) 99999-9999"
+            <Input label="Telefone" placeholder="Ex: 351 912 345 678"
               leftIcon="call-outline" keyboardType="phone-pad"
               onChangeText={(v) => onChange(maskPhone(v))} onBlur={onBlur} value={value}
               error={errors.phone?.message} />

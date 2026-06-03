@@ -142,30 +142,28 @@ export const patientSchema = z
     phone: z.string().optional().or(z.literal('')),
     phone_ddi: z.string().optional().or(z.literal('')),
 
-    // Documents — at least one required
-    cpf: z
+    // Documento de identificação
+    document_type: z.enum(['cpf', 'nif', 'other']).default('cpf'),
+    document_number: z
       .string()
-      .refine((v) => !v || v.replace(/\D/g, '').length === 0 || isValidCpf(v), {
-        message: 'CPF inválido',
-      })
       .optional()
-      .or(z.literal('')),
-    nif: z
-      .string()
-      .refine((v) => !v || v.replace(/\D/g, '').length === 0 || isValidNif(v), {
-        message: 'NIF inválido (Portugal)',
-      })
-      .optional()
-      .or(z.literal('')),
+      .or(z.literal(''))
+      .superRefine((v, ctx) => {
+        if (!v || v.replace(/\D/g, '').length === 0) return
+        // A validação de formato depende do document_type — feita com refine após o objeto
+      }),
 
     // Address
     address: z.string().optional().or(z.literal('')),
     billing_address: z.string().optional().or(z.literal('')),
     postal_code: z.string().optional().or(z.literal('')),
     city: z.string().optional().or(z.literal('')),
+    country_id: z.string().min(1, 'País é obrigatório'),
+    practice_location_id: z.string().min(1, 'Local de prática é obrigatório'),
 
     // Spouse / partner
     spouse_name: z.string().optional().or(z.literal('')),
+    spouse_phone_ddi: z.string().optional().or(z.literal('')),
     spouse_phone: z.string().optional().or(z.literal('')),
     spouse_email: z
       .string()
@@ -175,6 +173,7 @@ export const patientSchema = z
 
     // Tutor
     tutor_name: z.string().optional().or(z.literal('')),
+    tutor_phone_ddi: z.string().optional().or(z.literal('')),
     tutor_phone: z.string().optional().or(z.literal('')),
     tutor_email: z
       .string()
@@ -187,11 +186,13 @@ export const patientSchema = z
 
     // Emergency contact
     emergency_contact_name: z.string().optional().or(z.literal('')),
+    emergency_contact_phone_ddi: z.string().optional().or(z.literal('')),
     emergency_contact_phone: z.string().optional().or(z.literal('')),
 
     // Health coverage
     insurer_id: z.string().optional().or(z.literal('')),
     plan_id: z.string().optional().or(z.literal('')),
+    plan_name: z.string().optional().or(z.literal('')),
     sns_user_number: z.string().optional().or(z.literal('')),
     local_protocol: z.string().optional().or(z.literal('')),
 
@@ -205,14 +206,27 @@ export const patientSchema = z
   })
   .refine(
     (data) => {
-      const hasCpf =
-        data.cpf && data.cpf.replace(/\D/g, '').length > 0
-      const hasNif =
-        data.nif && data.nif.replace(/\D/g, '').length > 0
-      // At least one document OR neither (optional for non-billing patients)
-      return true // optional — warn in UI if both empty
+      // CPF e NIF são obrigatórios — apenas 'other' pode ficar em branco
+      if (data.document_type !== 'other') {
+        const num = data.document_number?.replace(/\D/g, '') ?? ''
+        if (!num) return false
+      }
+      return true
     },
-    { message: 'Informe CPF ou NIF para fins de faturação', path: ['cpf'] },
+    { message: 'Número do documento é obrigatório para CPF e NIF', path: ['document_number'] },
+  )
+  .refine(
+    (data) => {
+      const num = data.document_number?.replace(/\D/g, '') ?? ''
+      if (!num) return true
+      if (data.document_type === 'cpf') return isValidCpf(num)
+      if (data.document_type === 'nif') return isValidNif(num)
+      return true
+    },
+    (data) => ({
+      message: data.document_type === 'cpf' ? 'CPF inválido' : 'NIF inválido (deve ter 9 dígitos)',
+      path: ['document_number'],
+    }),
   )
 
 export type LoginFormData = z.infer<typeof loginSchema>

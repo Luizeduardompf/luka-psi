@@ -12,6 +12,7 @@ import { supabase } from '@/services/supabase'
 import { Button } from '@/components/ui/Button'
 import { useSessionStore } from '@/stores/session.store'
 import { Toast, useToast } from '@/components/ui/Toast'
+import { sanitizePhone } from '@/utils/format'
 
 interface PracticeLocation {
   id: string
@@ -37,6 +38,7 @@ const EMPTY_FORM = {
   contact_person: '', phone: '', phone_ddi: '', email: '',
   commission_type: 'none' as const, commission_value: '',
   payment_conditions: '', notes: '', color: '#6366F1',
+  is_active: true,
 }
 
 const COLOR_PRESETS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#3B82F6']
@@ -93,6 +95,7 @@ export default function PracticeLocationsScreen() {
       phone: l.phone ?? '', phone_ddi: l.phone_ddi ?? '', email: l.email ?? '',
       commission_type: l.commission_type, commission_value: l.commission_value?.toString() ?? '',
       payment_conditions: l.payment_conditions ?? '', notes: l.notes ?? '', color: l.color,
+      is_active: l.is_active,
     })
     setModal(true)
   }
@@ -142,7 +145,17 @@ export default function PracticeLocationsScreen() {
             }}>
               <View style={{ width: 14, height: 52, borderRadius: 7, backgroundColor: l.color }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text.primary }}>{l.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '600', color: l.is_active ? theme.colors.text.primary : theme.colors.text.tertiary }}>{l.name}</Text>
+                  <View style={{
+                    paddingHorizontal: 8, paddingVertical: 2, borderRadius: theme.radius.full,
+                    backgroundColor: l.is_active ? theme.colors.successLight : theme.colors.surfaceSecondary,
+                  }}>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: l.is_active ? theme.colors.success : theme.colors.text.tertiary }}>
+                      {l.is_active ? 'Ativo' : 'Inativo'}
+                    </Text>
+                  </View>
+                </View>
                 {l.city && <Text style={{ fontSize: 12, color: theme.colors.text.secondary, marginTop: 2 }}>{[l.city, l.address].filter(Boolean).join(' · ')}</Text>}
                 {(l.phone || l.email) && <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginTop: 1 }}>{[l.phone_ddi, l.phone].filter(Boolean).join(' ')} {l.email}</Text>}
               </View>
@@ -185,8 +198,8 @@ export default function PracticeLocationsScreen() {
               <View><Text style={fl}>Pessoa de contacto</Text><TextInput value={form.contact_person} onChangeText={(v) => set('contact_person', v)} placeholder="Nome" placeholderTextColor={theme.colors.text.tertiary} style={fi} /></View>
 
               <View style={{ flexDirection: 'row', gap: 8 }}>
-                <View style={{ width: 80 }}><Text style={fl}>DDI</Text><TextInput value={form.phone_ddi} onChangeText={(v) => set('phone_ddi', v)} placeholder="+351" placeholderTextColor={theme.colors.text.tertiary} style={fi} keyboardType="phone-pad" /></View>
-                <View style={{ flex: 1 }}><Text style={fl}>Telefone</Text><TextInput value={form.phone} onChangeText={(v) => set('phone', v)} placeholder="912 345 678" placeholderTextColor={theme.colors.text.tertiary} style={fi} keyboardType="phone-pad" /></View>
+                <View style={{ width: 80 }}><Text style={fl}>DDI</Text><TextInput value={form.phone_ddi} onChangeText={(v) => set('phone_ddi', sanitizePhone(v))} placeholder="+351" placeholderTextColor={theme.colors.text.tertiary} style={fi} keyboardType="phone-pad" /></View>
+                <View style={{ flex: 1 }}><Text style={fl}>Telefone</Text><TextInput value={form.phone} onChangeText={(v) => set('phone', sanitizePhone(v))} placeholder="912 345 678" placeholderTextColor={theme.colors.text.tertiary} style={fi} keyboardType="phone-pad" /></View>
               </View>
 
               <View><Text style={fl}>Email</Text><TextInput value={form.email} onChangeText={(v) => set('email', v)} placeholder="info@clinica.pt" placeholderTextColor={theme.colors.text.tertiary} style={fi} keyboardType="email-address" autoCapitalize="none" /></View>
@@ -215,6 +228,31 @@ export default function PracticeLocationsScreen() {
 
               <View><Text style={fl}>Condições de pagamento</Text><TextInput value={form.payment_conditions} onChangeText={(v) => set('payment_conditions', v)} placeholder="Ex: 30 dias após sessão" placeholderTextColor={theme.colors.text.tertiary} style={fi} /></View>
               <View><Text style={fl}>Notas</Text><TextInput value={form.notes} onChangeText={(v) => set('notes', v)} placeholder="Notas internas..." placeholderTextColor={theme.colors.text.tertiary} style={[fi, { minHeight: 60, textAlignVertical: 'top' }]} multiline /></View>
+
+              {/* Status */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 }}>
+                <View>
+                  <Text style={fl}>Status</Text>
+                  <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginTop: 2 }}>
+                    {form.is_active ? 'Activo — aparece nas opções de selecção' : 'Inactivo — não aparece para novos pacientes'}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => setForm((p) => ({ ...p, is_active: !p.is_active }))}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 8,
+                    paddingHorizontal: 14, paddingVertical: 8, borderRadius: theme.radius.full,
+                    backgroundColor: form.is_active ? theme.colors.successLight : theme.colors.surfaceSecondary,
+                    borderWidth: 1,
+                    borderColor: form.is_active ? theme.colors.success : theme.colors.border,
+                  }}
+                >
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: form.is_active ? theme.colors.success : theme.colors.text.tertiary }} />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: form.is_active ? theme.colors.success : theme.colors.text.secondary }}>
+                    {form.is_active ? 'Ativo' : 'Inativo'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               {/* Color */}
               <View>

@@ -2,7 +2,7 @@
  * Fluxo de envio de formulário para paciente — 7 etapas.
  * Parâmetros de rota: ?patientId=...
  */
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import {
   View,
   Text,
@@ -16,7 +16,7 @@ import {
   Linking,
   Clipboard,
 } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { theme } from '@/constants/theme'
@@ -53,6 +53,17 @@ export default function SendFormScreen() {
   const insets = useSafeAreaInsets()
   const { profile } = useSessionStore()
 
+  const goToPatientForms = () => {
+    if (patientId) {
+      router.replace({
+        pathname: '/(app)/patients/[id]',
+        params: { id: patientId, tab: 'forms' },
+      })
+    } else {
+      router.back()
+    }
+  }
+
   const { data: patient } = usePatient(patientId ?? '')
   const { data: templates = [], isLoading: templatesLoading } = useFormTemplates()
   const { data: genders } = useGenders()
@@ -73,6 +84,20 @@ export default function SendFormScreen() {
     id: string
     token: string
   } | null>(null)
+
+  // Reset ao entrar na tela — garante que começa sempre no step 1
+  useFocusEffect(useCallback(() => {
+    setStep(1)
+    setSelectedTemplate(null)
+    setPassword('')
+    setShowPassword(true)
+    setHasExpiry(false)
+    setExpiryDate('')
+    setCustomMessage(DEFAULT_SEND_MESSAGE)
+    setSentSubmission(null)
+    setExtraSections([])
+    setExpiryDateError('')
+  }, []))
   const [extraSections, setExtraSections] = useState<
     Array<{
       title: string
@@ -846,7 +871,7 @@ export default function SendFormScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <TouchableOpacity
             onPress={() => {
-              if (step === 1 || step === 7) router.back()
+              if (step === 1 || step === 7) goToPatientForms()
               else setStep((s) => (s - 1) as Step)
             }}
           >
@@ -951,7 +976,7 @@ export default function SendFormScreen() {
         >
           <Button
             title="Concluir"
-            onPress={() => router.back()}
+            onPress={goToPatientForms}
             fullWidth
           />
         </View>

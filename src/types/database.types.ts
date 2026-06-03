@@ -113,6 +113,8 @@ export type Database = {
           phone: string | null
           cpf: string | null
           nif: string | null
+          document_number: string | null
+          document_type: string | null
           date_of_birth: string | null
           gender: string | null
           gender_id: string | null
@@ -124,23 +126,30 @@ export type Database = {
           billing_address: string | null
           postal_code: string | null
           city: string | null
+          country_id: string | null
+          practice_location_id: string | null
           spouse_name: string | null
           spouse_phone: string | null
+          spouse_phone_ddi: string | null
           spouse_email: string | null
           tutor_name: string | null
           tutor_phone: string | null
           tutor_email: string | null
+          tutor_phone_ddi: string | null
           additional_contacts: Json | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           insurer_id: string | null
           plan_id: string | null
+          emergency_contact_phone_ddi: string | null
+          plan_name: string | null
           sns_user_number: string | null
           local_protocol: string | null
           consent_rgpd: boolean
           consent_informed: boolean
           consent_minors: boolean
           notes: string | null
+          photo_url: string | null
           created_at: string
           updated_at: string
         }
@@ -153,6 +162,8 @@ export type Database = {
           phone?: string | null
           cpf?: string | null
           nif?: string | null
+          document_number?: string | null
+          document_type?: string | null
           date_of_birth?: string | null
           gender?: string | null
           gender_id?: string | null
@@ -164,23 +175,30 @@ export type Database = {
           billing_address?: string | null
           postal_code?: string | null
           city?: string | null
+          country_id?: string | null
+          practice_location_id?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
+          spouse_phone_ddi?: string | null
           spouse_email?: string | null
           tutor_name?: string | null
           tutor_phone?: string | null
           tutor_email?: string | null
+          tutor_phone_ddi?: string | null
           additional_contacts?: Json | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           insurer_id?: string | null
+          emergency_contact_phone_ddi?: string | null
           plan_id?: string | null
+          plan_name?: string | null
           sns_user_number?: string | null
           local_protocol?: string | null
           consent_rgpd?: boolean
           consent_informed?: boolean
           consent_minors?: boolean
           notes?: string | null
+          photo_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -193,6 +211,8 @@ export type Database = {
           phone?: string | null
           cpf?: string | null
           nif?: string | null
+          document_number?: string | null
+          document_type?: string | null
           date_of_birth?: string | null
           gender?: string | null
           gender_id?: string | null
@@ -204,23 +224,30 @@ export type Database = {
           billing_address?: string | null
           postal_code?: string | null
           city?: string | null
+          country_id?: string | null
+          practice_location_id?: string | null
           spouse_name?: string | null
           spouse_phone?: string | null
+          spouse_phone_ddi?: string | null
           spouse_email?: string | null
           tutor_name?: string | null
           tutor_phone?: string | null
           tutor_email?: string | null
+          tutor_phone_ddi?: string | null
           additional_contacts?: Json | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           insurer_id?: string | null
+          emergency_contact_phone_ddi?: string | null
           plan_id?: string | null
+          plan_name?: string | null
           sns_user_number?: string | null
           local_protocol?: string | null
           consent_rgpd?: boolean
           consent_informed?: boolean
           consent_minors?: boolean
           notes?: string | null
+          photo_url?: string | null
           created_at?: string
           updated_at?: string
         }

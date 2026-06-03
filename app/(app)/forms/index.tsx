@@ -214,7 +214,7 @@ export default function FormsLibraryScreen() {
             title="Preview"
             variant="ghost"
             size="sm"
-            leftIcon={<Ionicons name="open-outline" size={14} color={theme.colors.secondary} />}
+            leftIcon={<Ionicons name="open-outline" size={14} color={theme.colors.accent} />}
             onPress={() => {
               const url = formsService.buildPublicUrl(`preview-${template.id}`)
               void Linking.openURL(url)

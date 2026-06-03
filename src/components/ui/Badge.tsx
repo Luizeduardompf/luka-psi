@@ -11,10 +11,10 @@ interface BadgeProps {
 }
 
 const variantMap: Record<BadgeVariant, { bg: string; text: string }> = {
-  success: { bg: '#D1FAE5', text: '#065F46' },
-  warning: { bg: '#FEF3C7', text: '#92400E' },
-  error: { bg: '#FEE2E2', text: '#991B1B' },
-  info: { bg: '#DBEAFE', text: '#1E40AF' },
+  success: { bg: theme.colors.successLight, text: '#166534' },
+  warning: { bg: theme.colors.warningLight, text: '#92400E' },
+  error: { bg: theme.colors.errorLight, text: '#991B1B' },
+  info: { bg: theme.colors.infoLight, text: '#1E40AF' },
   default: { bg: theme.colors.surfaceSecondary, text: theme.colors.text.secondary },
 }
 
@@ -41,17 +41,16 @@ export const Badge = memo(function Badge({
       style={{
         backgroundColor: styles.bg,
         borderRadius: theme.radius.full,
-        paddingVertical: 3,
-        paddingHorizontal: 10,
+        paddingVertical: 2,
+        paddingHorizontal: 8,
         alignSelf: 'flex-start',
       }}
     >
       <Text
         style={{
-          fontSize: 12,
-          fontWeight: '600',
+          ...theme.typography.caption,
+          fontWeight: '500',
           color: styles.text,
-          letterSpacing: 0.2,
         }}
       >
         {label}

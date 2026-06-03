@@ -18,7 +18,7 @@ import { usePatients, useRecentPatients } from '@/hooks/usePatients'
 import { greetingByHour } from '@/utils/format'
 import { useGenders, getPronounTreatment } from '@/hooks/useGenders'
 
-// ─── Stat card ─────────────────────────────────────────────────────────────────
+// ─── Stat card (compact) ───────────────────────────────────────────────────────
 function StatCard({
   label,
   value,
@@ -31,40 +31,55 @@ function StatCard({
   color: string
 }) {
   return (
-    <Card style={{ flex: 1, alignItems: 'flex-start' }}>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.surface,
+        borderRadius: theme.radius.lg,
+        padding: theme.spacing.md,
+        ...theme.shadow.sm,
+      }}
+    >
       <View
         style={{
-          width: 40,
-          height: 40,
-          borderRadius: theme.radius.md,
-          backgroundColor: color + '22',
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-between',
           marginBottom: theme.spacing.sm,
         }}
       >
-        <Ionicons name={icon} size={20} color={color} />
+        <View
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: theme.radius.sm,
+            backgroundColor: color + '14',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Ionicons name={icon} size={16} color={color} />
+        </View>
       </View>
       <Text
         style={{
-          fontSize: 28,
-          fontWeight: '800',
+          ...theme.typography.display,
+          fontSize: 24,
           color: theme.colors.text.primary,
-          letterSpacing: -0.5,
         }}
       >
         {value}
       </Text>
       <Text
         style={{
-          fontSize: 12,
-          color: theme.colors.text.secondary,
+          ...theme.typography.caption,
+          color: theme.colors.text.tertiary,
           marginTop: 2,
         }}
       >
         {label}
       </Text>
-    </Card>
+    </View>
   )
 }
 
@@ -110,7 +125,7 @@ function QuickAction({
       </View>
       <Text
         style={{
-          fontSize: 12,
+          ...theme.typography.caption,
           fontWeight: '500',
           color: theme.colors.text.secondary,
           textAlign: 'center',
@@ -119,6 +134,50 @@ function QuickAction({
         {label}
       </Text>
     </TouchableOpacity>
+  )
+}
+
+// ─── Section header ────────────────────────────────────────────────────────────
+function SectionHeader({
+  title,
+  actionLabel,
+  onAction,
+}: {
+  title: string
+  actionLabel?: string
+  onAction?: () => void
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: theme.spacing.sm,
+      }}
+    >
+      <Text
+        style={{
+          ...theme.typography.overline,
+          color: theme.colors.text.secondary,
+          textTransform: 'uppercase',
+        }}
+      >
+        {title}
+      </Text>
+      {actionLabel && onAction && (
+        <TouchableOpacity onPress={onAction} activeOpacity={0.7}>
+          <Text
+            style={{
+              ...theme.typography.label,
+              color: theme.colors.primary,
+            }}
+          >
+            {actionLabel}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
   )
 }
 
@@ -145,15 +204,17 @@ export default function DashboardScreen() {
   }, [allPatients, activePatients, recentPatients])
 
   // Greeting: pronome + nome profissional (ou nome completo como fallback)
-  const pronoun = profile?.gender_id ? getPronounTreatment(genders, profile.gender_id) : ''
-  const professionalName = profile?.professional_name || displayName
-  const greetingName = pronoun ? `${pronoun} ${professionalName}` : professionalName
-  const firstName = greetingName.split(' ')[0] ?? greetingName
+  const pronoun = profile?.gender_id
+    ? getPronounTreatment(genders, profile.gender_id)
+    : ''
+  const rawName = profile?.professional_name || displayName
+  // Remove prefixos de título que possam vir no campo (ex: "Dr. Luiz" → "Luiz")
+  const nameWithoutPrefix = rawName.replace(/^(Dr[a]?\.?\s+|Prof\.?\s+)/i, '').trim()
+  const firstName = nameWithoutPrefix.split(' ')[0] || rawName
+  const greetingName = pronoun ? `${pronoun} ${firstName}` : firstName
 
   return (
-    <View
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-    >
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView
         contentContainerStyle={{
           paddingTop: insets.top + theme.spacing.md,
@@ -179,58 +240,73 @@ export default function DashboardScreen() {
           }}
         >
           {/* Left: avatar + greeting */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
+          >
             <Avatar name={displayName} uri={profile?.avatar_url} size="lg" />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, color: theme.colors.text.secondary }}>
+              <Text
+                style={{
+                  ...theme.typography.bodySmall,
+                  color: theme.colors.text.secondary,
+                }}
+              >
                 {greetingByHour()},
               </Text>
-              <Text style={{
-                fontSize: 20, fontWeight: '700',
-                color: theme.colors.text.primary, letterSpacing: -0.3,
-              }}>
-                {firstName}! 👋
+              <Text
+                style={{
+                  ...theme.typography.h2,
+                  color: theme.colors.text.primary,
+                }}
+              >
+                {greetingName}
               </Text>
             </View>
           </View>
-          {/* Right: notification + settings */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <TouchableOpacity
-              style={{
-                width: 40, height: 40, borderRadius: 20,
-                alignItems: 'center', justifyContent: 'center',
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push('/(app)/settings')}
-              style={{
-                width: 40, height: 40, borderRadius: 20,
-                alignItems: 'center', justifyContent: 'center',
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="settings-outline" size={24} color={theme.colors.text.primary} />
-            </TouchableOpacity>
-          </View>
+          {/* Right: notifications */}
+          <TouchableOpacity
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
+          </TouchableOpacity>
         </View>
+
+        {/* Quick Actions */}
+        <Card>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+            <QuickAction
+              label="Novo Paciente"
+              icon="person-add"
+              color={theme.colors.primary}
+              onPress={() => router.push('/(app)/patients/new')}
+            />
+            <QuickAction
+              label="Agenda"
+              icon="calendar"
+              color={theme.colors.accent}
+              onPress={() => router.push('/(app)/agenda' as never)}
+              disabled
+            />
+            <QuickAction
+              label="Relatórios"
+              icon="bar-chart"
+              color={theme.colors.warning}
+              onPress={() => {}}
+              disabled
+            />
+          </View>
+        </Card>
 
         {/* Stats */}
         <View>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: '700',
-              color: theme.colors.text.secondary,
-              textTransform: 'uppercase',
-              letterSpacing: 0.8,
-              marginBottom: theme.spacing.sm,
-            }}
-          >
-            Visão geral
-          </Text>
+          <SectionHeader title="Visao geral" />
           <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
             <StatCard
               label="Total"
@@ -245,89 +321,21 @@ export default function DashboardScreen() {
               color={theme.colors.success}
             />
             <StatCard
-              label="Consultas hoje"
-              value="—"
+              label="Hoje"
+              value="-"
               icon="calendar"
-              color={theme.colors.secondary}
+              color={theme.colors.accent}
             />
           </View>
         </View>
 
-        {/* Quick actions */}
-        <View>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: '700',
-              color: theme.colors.text.secondary,
-              textTransform: 'uppercase',
-              letterSpacing: 0.8,
-              marginBottom: theme.spacing.sm,
-            }}
-          >
-            Ações rápidas
-          </Text>
-          <Card>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-              <QuickAction
-                label="Novo Paciente"
-                icon="person-add"
-                color={theme.colors.primary}
-                onPress={() => router.push('/(app)/patients/new')}
-              />
-              <QuickAction
-                label="Agenda"
-                icon="calendar"
-                color={theme.colors.secondary}
-                onPress={() => {}}
-                disabled
-              />
-              <QuickAction
-                label="Relatórios"
-                icon="bar-chart"
-                color={theme.colors.warning}
-                onPress={() => {}}
-                disabled
-              />
-            </View>
-          </Card>
-        </View>
-
         {/* Recent patients */}
         <View>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: theme.spacing.sm,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: '700',
-                color: theme.colors.text.secondary,
-                textTransform: 'uppercase',
-                letterSpacing: 0.8,
-              }}
-            >
-              Pacientes recentes
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/(app)/patients')}
-            >
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: theme.colors.primary,
-                  fontWeight: '600',
-                }}
-              >
-                Ver todos
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            title="Pacientes recentes"
+            actionLabel="Ver todos"
+            onAction={() => router.push('/(app)/patients')}
+          />
 
           {recentPatients.isLoading ? (
             <View
@@ -337,13 +345,24 @@ export default function DashboardScreen() {
                 justifyContent: 'center',
               }}
             >
-              <Text style={{ color: theme.colors.text.tertiary }}>
+              <Text
+                style={{
+                  ...theme.typography.body,
+                  color: theme.colors.text.tertiary,
+                }}
+              >
                 Carregando...
               </Text>
             </View>
           ) : recentPatients.data?.length === 0 ? (
             <Card>
-              <View style={{ alignItems: 'center', paddingVertical: theme.spacing.lg, gap: 8 }}>
+              <View
+                style={{
+                  alignItems: 'center',
+                  paddingVertical: theme.spacing.lg,
+                  gap: 8,
+                }}
+              >
                 <Ionicons
                   name="people-outline"
                   size={40}
@@ -351,8 +370,8 @@ export default function DashboardScreen() {
                 />
                 <Text
                   style={{
+                    ...theme.typography.body,
                     color: theme.colors.text.secondary,
-                    fontSize: 15,
                     textAlign: 'center',
                   }}
                 >

@@ -8,7 +8,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native'
-import { router, useLocalSearchParams } from 'expo-router'
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Avatar } from '@/components/ui/Avatar'
@@ -18,13 +18,186 @@ import { PatientForm } from '@/components/patients/PatientForm'
 import { PatientFormsTab } from '@/components/forms/PatientFormsTab'
 import { theme } from '@/constants/theme'
 import { usePatient, useUpdatePatient, useDeletePatient } from '@/hooks/usePatients'
-import { formatDate, formatPhone, formatCpf, getPatientAvatarUrl } from '@/utils/format'
+import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
+import { formatDate, formatPhone, formatCpf, formatDocument } from '@/utils/format'
+
+function calcAge(dob: string | null | undefined): string | null {
+  if (!dob) return null
+  const birth = new Date(dob)
+  const today = new Date()
+  let age = today.getFullYear() - birth.getFullYear()
+  const m = today.getMonth() - birth.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+  return `${age} anos`
+}
 import { PatientSchemaData } from '@/utils/validators'
 import { PatientStatus } from '@/types/app.types'
 import { useGenders } from '@/hooks/useGenders'
 import { Toast, useToast } from '@/components/ui/Toast'
+import { PhotoViewer } from '@/components/ui/PhotoViewer'
 
-type ActiveTab = 'info' | 'forms'
+type ActiveTab = 'info' | 'sessions' | 'forms' | 'attachments' | 'financial'
+
+const TAB_LABELS: Record<ActiveTab, string> = {
+  info: 'Informações',
+  sessions: 'Sessões',
+  forms: 'Formulários',
+  attachments: 'Anexos',
+  financial: 'Financeiro',
+}
+
+function FinancialTab() {
+  // Valores placeholder — serão calculados a partir das sessões quando implementadas
+  const totalBilled  = 0
+  const totalPaid    = 0
+  const totalPending = 0
+  const balance      = totalPaid - totalBilled // negativo = devedor, positivo = crédito
+
+  const fmt = (v: number) =>
+    v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+  return (
+    <ScrollView
+      contentContainerStyle={{
+        padding: theme.spacing.md,
+        paddingBottom: 80,
+        gap: theme.spacing.md,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Saldo da conta-corrente */}
+      <View style={{
+        borderRadius: theme.radius.lg,
+        backgroundColor: balance < 0 ? theme.colors.errorLight : balance > 0 ? theme.colors.successLight : theme.colors.surfaceSecondary,
+        padding: theme.spacing.lg,
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+        ...theme.shadow.sm,
+      }}>
+        <Text style={{ ...theme.typography.overline, color: theme.colors.text.secondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+          Saldo Conta-Corrente
+        </Text>
+        <Text style={{
+          ...theme.typography.display,
+          fontSize: 36,
+          color: balance < 0 ? theme.colors.error : balance > 0 ? theme.colors.success : theme.colors.text.secondary,
+        }}>
+          {fmt(Math.abs(balance))}
+        </Text>
+        <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary }}>
+          {balance < 0 ? 'Em aberto (a receber)' : balance > 0 ? 'Crédito do paciente' : 'Sem saldo pendente'}
+        </Text>
+      </View>
+
+      {/* Demonstrativo */}
+      <Text style={{ ...theme.typography.overline, color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: 0.8, paddingHorizontal: 2 }}>
+        Demonstrativo
+      </Text>
+      <Card>
+        <DemoRow label="Total faturado" value={fmt(totalBilled)} />
+        <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: theme.spacing.sm }} />
+        <DemoRow label="Total pago" value={fmt(totalPaid)} valueColor={theme.colors.success} />
+        <DemoRow label="Pendente de pagamento" value={fmt(totalPending)} valueColor={totalPending > 0 ? theme.colors.warning : theme.colors.text.secondary} />
+        <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: theme.spacing.sm }} />
+        <DemoRow label="Saldo" value={fmt(Math.abs(balance))} valueColor={balance < 0 ? theme.colors.error : theme.colors.success} bold />
+      </Card>
+
+      {/* Placeholder sessões */}
+      <Card>
+        <View style={{ alignItems: 'center', paddingVertical: theme.spacing.lg, gap: theme.spacing.sm }}>
+          <Ionicons name="receipt-outline" size={36} color={theme.colors.text.tertiary} />
+          <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary, textAlign: 'center' }}>
+            O histórico de cobranças por sessão{'\n'}estará disponível quando a agenda for implementada.
+          </Text>
+        </View>
+      </Card>
+    </ScrollView>
+  )
+}
+
+function DemoRow({ label, value, valueColor, bold }: { label: string; value: string; valueColor?: string; bold?: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 }}>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text.secondary, flex: 1 }}>{label}</Text>
+      <Text style={{ ...theme.typography.bodyMedium, color: valueColor ?? theme.colors.text.primary, fontWeight: bold ? '700' : '500' }}>
+        {value}
+      </Text>
+    </View>
+  )
+}
+
+function PlaceholderTab({ icon, label, description }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; description: string }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: theme.spacing.md, padding: theme.spacing.xl }}>
+      <View style={{
+        width: 72, height: 72, borderRadius: theme.radius.xl,
+        backgroundColor: theme.colors.primaryLight,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name={icon} size={36} color={theme.colors.primary} />
+      </View>
+      <Text style={{ ...theme.typography.h3, color: theme.colors.text.primary }}>{label}</Text>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text.tertiary, textAlign: 'center' }}>{description}</Text>
+    </View>
+  )
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <Text style={{
+      ...theme.typography.overline,
+      color: theme.colors.text.tertiary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: theme.spacing.sm,
+      marginTop: theme.spacing.xs,
+      paddingHorizontal: 2,
+    }}>
+      {title}
+    </Text>
+  )
+}
+
+function Divider() {
+  return <View style={{ height: 1, backgroundColor: theme.colors.border, marginVertical: theme.spacing.sm }} />
+}
+
+function ConsentRow({ label, granted }: { label: string; granted: boolean }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }}>
+      <View style={{
+        width: 32, height: 32, borderRadius: theme.radius.sm,
+        backgroundColor: granted ? theme.colors.successLight : theme.colors.surfaceSecondary,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons
+          name={granted ? 'checkmark-circle' : 'ellipse-outline'}
+          size={16}
+          color={granted ? theme.colors.success : theme.colors.text.tertiary}
+        />
+      </View>
+      <Text style={{ ...theme.typography.body, color: granted ? theme.colors.text.primary : theme.colors.text.tertiary, flex: 1 }}>
+        {label}
+      </Text>
+      <Text style={{ ...theme.typography.caption, color: granted ? theme.colors.success : theme.colors.text.tertiary, fontWeight: '600' }}>
+        {granted ? 'Concedido' : 'Pendente'}
+      </Text>
+    </View>
+  )
+}
+
+function FichaItem({ label, value, flex }: { label: string; value: string; flex?: number }) {
+  return (
+    <View style={{ flex: flex ?? 1 }}>
+      <Text style={{ ...theme.typography.caption, color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 2 }}>
+        {label}
+      </Text>
+      <Text style={{ ...theme.typography.bodyMedium, color: theme.colors.text.primary }}>
+        {value}
+      </Text>
+    </View>
+  )
+}
 
 function InfoRow({
   icon,
@@ -71,6 +244,48 @@ function InfoRow({
   )
 }
 
+function ContactInfoRow({
+  icon,
+  label,
+  name,
+  phone,
+  email,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name']
+  label: string
+  name: string | null | undefined
+  phone?: string | null | undefined
+  email?: string | null | undefined
+}) {
+  if (!name) return null
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 8 }}>
+      <View style={{
+        width: 32, height: 32, borderRadius: theme.radius.sm,
+        backgroundColor: theme.colors.primaryLight, alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Ionicons name={icon} size={16} color={theme.colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginBottom: 2 }}>{label}</Text>
+        <Text style={{ fontSize: 15, color: theme.colors.text.primary, fontWeight: '500' }}>{name}</Text>
+        {phone ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+            <Ionicons name="call-outline" size={12} color={theme.colors.text.tertiary} />
+            <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary }}>{phone}</Text>
+          </View>
+        ) : null}
+        {email ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Ionicons name="mail-outline" size={12} color={theme.colors.text.tertiary} />
+            <Text style={{ ...theme.typography.bodySmall, color: theme.colors.text.secondary }}>{email}</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  )
+}
+
 const GENDER_LABEL: Record<string, string> = {
   female_cis: 'Feminino (cisgênero)',
   male_cis: 'Masculino (cisgênero)',
@@ -84,15 +299,32 @@ const GENDER_LABEL: Record<string, string> = {
 }
 
 export default function PatientDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>()
   const insets = useSafeAreaInsets()
   const [editVisible, setEditVisible] = useState(false)
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
+  const validTabs: ActiveTab[] = ['info', 'sessions', 'forms', 'attachments', 'financial']
   const [activeTab, setActiveTab] = useState<ActiveTab>('info')
+
+  // Ao ganhar foco: reseta para 'info' excepto se vier com param `tab` explícito (pilha)
+  useFocusEffect(
+    useCallback(() => {
+      const target = validTabs.includes(initialTab as ActiveTab)
+        ? (initialTab as ActiveTab)
+        : 'info'
+      setActiveTab(target)
+    }, [initialTab])
+  )
 
   const { data: patient, isLoading, refetch } = usePatient(id)
   const updateMutation = useUpdatePatient(id)
   const deleteMutation = useDeletePatient()
   const { data: gendersData = [] } = useGenders()
+  const { data: civilStatuses = [] } = useCivilStatuses()
+  const { data: insurers = [] } = useInsurers()
+  const { data: plans = [] } = usePlans(patient?.insurer_id ?? undefined)
+  const { data: countries = [] } = useCountries()
+  const { data: practiceLocations = [] } = usePracticeLocations()
   const { toast, showToast, hideToast } = useToast()
 
   const handleDelete = useCallback(() => {
@@ -125,8 +357,11 @@ export default function PatientDetailScreen() {
             preferred_name: data.preferred_name || null,
             email: data.email || null,
             phone: data.phone || null,
-            cpf: data.cpf || null,
-            nif: data.nif || null,
+            document_number: data.document_number || null,
+            document_type: data.document_number ? (data.document_type || 'cpf') : null,
+            // manter retrocompatibilidade
+            cpf: data.document_type === 'cpf' ? (data.document_number || null) : null,
+            nif: data.document_type === 'nif' ? (data.document_number || null) : null,
             date_of_birth: data.date_of_birth || null,
             gender: data.gender || null,
             gender_id: data.gender_id || null,
@@ -138,17 +373,23 @@ export default function PatientDetailScreen() {
             billing_address: data.billing_address || null,
             postal_code: data.postal_code || null,
             city: data.city || null,
+            country_id: data.country_id || null,
+            practice_location_id: data.practice_location_id || null,
             spouse_name: data.spouse_name || null,
+            spouse_phone_ddi: data.spouse_phone_ddi || null,
             spouse_phone: data.spouse_phone || null,
             spouse_email: data.spouse_email || null,
             tutor_name: data.tutor_name || null,
+            tutor_phone_ddi: data.tutor_phone_ddi || null,
             tutor_phone: data.tutor_phone || null,
             tutor_email: data.tutor_email || null,
             additional_contacts: data.additional_contacts ?? [],
             emergency_contact_name: data.emergency_contact_name || null,
+            emergency_contact_phone_ddi: data.emergency_contact_phone_ddi || null,
             emergency_contact_phone: data.emergency_contact_phone || null,
             insurer_id: data.insurer_id || null,
             plan_id: data.plan_id || null,
+            plan_name: data.plan_name || null,
             sns_user_number: data.sns_user_number || null,
             local_protocol: data.local_protocol || null,
             consent_rgpd: data.consent_rgpd ?? false,
@@ -255,7 +496,7 @@ export default function PatientDetailScreen() {
           borderBottomColor: theme.colors.border,
         }}
       >
-        {(['info', 'forms'] as ActiveTab[]).map((tab) => (
+        {(['info', 'sessions', 'forms', 'attachments', 'financial'] as ActiveTab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
@@ -271,7 +512,7 @@ export default function PatientDetailScreen() {
           >
             <Text
               style={{
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: '600',
                 color:
                   activeTab === tab
@@ -279,7 +520,7 @@ export default function PatientDetailScreen() {
                     : theme.colors.text.tertiary,
               }}
             >
-              {tab === 'info' ? 'Informações' : 'Formulários'}
+              {TAB_LABELS[tab]}
             </Text>
           </TouchableOpacity>
         ))}
@@ -287,6 +528,12 @@ export default function PatientDetailScreen() {
 
       {activeTab === 'forms' ? (
         <PatientFormsTab patientId={patient.id} patientName={patient.full_name} />
+      ) : activeTab === 'sessions' ? (
+        <PlaceholderTab icon="calendar-outline" label="Sessões" description="O histórico de sessões estará disponível em breve." />
+      ) : activeTab === 'attachments' ? (
+        <PlaceholderTab icon="attach-outline" label="Anexos" description="Gestão de documentos e anexos estará disponível em breve." />
+      ) : activeTab === 'financial' ? (
+        <FinancialTab />
       ) : (
 
       <ScrollView
@@ -300,196 +547,227 @@ export default function PatientDetailScreen() {
         {/* Profile header */}
         <Card elevated>
           <View style={{ alignItems: 'center', gap: 12 }}>
-            <Avatar
-              name={patient.full_name}
-              uri={getPatientAvatarUrl(patient.full_name, patient.gender)}
-              size="xl"
-            />
-            <View style={{ alignItems: 'center', gap: 6 }}>
+            <TouchableOpacity
+              onPress={() => { if (patient.photo_url) setPhotoViewerVisible(true) }}
+              activeOpacity={patient.photo_url ? 0.8 : 1}
+            >
+              <Avatar
+                name={patient.full_name}
+                uri={patient.photo_url ?? null}
+                size="xl"
+              />
+            </TouchableOpacity>
+            <View style={{ alignItems: 'center', gap: 4 }}>
+              {patient.preferred_name && patient.preferred_name !== patient.full_name && (
+                <Text
+                  style={{
+                    ...theme.typography.h3,
+                    color: theme.colors.primary,
+                    textAlign: 'center',
+                  }}
+                >
+                  {patient.preferred_name}
+                </Text>
+              )}
               <Text
                 style={{
-                  fontSize: 22,
-                  fontWeight: '700',
-                  color: theme.colors.text.primary,
+                  fontSize: patient.preferred_name && patient.preferred_name !== patient.full_name ? 14 : 22,
+                  fontWeight: patient.preferred_name && patient.preferred_name !== patient.full_name ? '400' : '700',
+                  color: patient.preferred_name && patient.preferred_name !== patient.full_name
+                    ? theme.colors.text.secondary
+                    : theme.colors.text.primary,
                   textAlign: 'center',
                 }}
               >
                 {patient.full_name}
               </Text>
-              <Badge
-                label={statusLabelMap[status] ?? status}
-                variant={statusVariantMap[status] ?? 'default'}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                <Badge
+                  label={statusLabelMap[status] ?? status}
+                  variant={statusVariantMap[status] ?? 'default'}
+                />
+                {patient.practice_location_id && (() => {
+                  const loc = practiceLocations.find((l) => l.id === patient.practice_location_id)
+                  if (!loc) return null
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 2, borderRadius: theme.radius.full, backgroundColor: theme.colors.surfaceSecondary }}>
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: loc.color }} />
+                      <Text style={{ ...theme.typography.caption, fontWeight: '500', color: theme.colors.text.secondary }}>{loc.name}</Text>
+                    </View>
+                  )
+                })()}
+              </View>
             </View>
           </View>
         </Card>
 
-        {/* Personal info */}
-        <View>
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: theme.colors.text.tertiary,
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              marginBottom: theme.spacing.sm,
-            }}
-          >
-            Informações pessoais
-          </Text>
-          <Card>
-            <InfoRow
-              icon="calendar-outline"
-              label="Data de nascimento"
-              value={formatDate(patient.date_of_birth)}
-            />
-            <InfoRow
-              icon="transgender-outline"
-              label="Gênero"
-              value={
-                patient.gender_id
-                  ? (gendersData.find((g) => g.id === patient.gender_id)?.name ?? null)
-                  : patient.gender
-                    ? GENDER_LABEL[patient.gender]
-                    : null
+        {/* Ficha de resumo */}
+        <Card>
+          <View style={{ gap: theme.spacing.md }}>
+
+            <View style={{ flexDirection: 'row' }}>
+              <FichaItem
+                label="Nascimento"
+                value={`${formatDate(patient.date_of_birth)}${calcAge(patient.date_of_birth) ? ` · ${calcAge(patient.date_of_birth)}` : ''}`}
+              />
+              <FichaItem
+                label="Cidade"
+                value={[
+                  patient.city,
+                  countries.find((c) => c.id === patient.country_id)?.name,
+                ].filter(Boolean).join(', ') || '—'}
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row' }}>
+              {patient.tutor_name
+                ? <FichaItem label="Responsável" value={patient.tutor_name} />
+                : <View style={{ flex: 1 }} />
               }
-            />
-            <InfoRow icon="card-outline" label="CPF" value={patient.cpf ? formatCpf(patient.cpf) : null} />
-            <InfoRow icon="card-outline" label="NIF" value={patient.nif ?? null} />
-            <InfoRow icon="briefcase-outline" label="Profissão" value={patient.profession ?? null} />
-            <InfoRow icon="location-outline" label="Morada" value={patient.address ?? null} />
-            {patient.tutor_name ? (
-              <InfoRow icon="people-outline" label="Responsável" value={patient.tutor_name} />
-            ) : null}
-          </Card>
-        </View>
+              <FichaItem label="Cadastro" value={formatDate(patient.created_at)} />
+            </View>
 
-        {/* Contact */}
-        <View>
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: theme.colors.text.tertiary,
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              marginBottom: theme.spacing.sm,
-            }}
-          >
-            Contato
-          </Text>
-          <Card>
-            <InfoRow
-              icon="mail-outline"
-              label="E-mail"
-              value={patient.email}
-            />
-            <InfoRow
-              icon="call-outline"
-              label="Telefone"
-              value={patient.phone ? formatPhone(patient.phone) : null}
-            />
-            {(patient.emergency_contact_name ||
-              patient.emergency_contact_phone) && (
-              <>
-                <View
-                  style={{
-                    height: 1,
-                    backgroundColor: theme.colors.border,
-                    marginVertical: 8,
-                  }}
-                />
-                <InfoRow
-                  icon="people-outline"
-                  label="Contato de emergência"
-                  value={patient.emergency_contact_name}
-                />
-                <InfoRow
-                  icon="call-outline"
-                  label="Telefone do contato"
-                  value={
-                    patient.emergency_contact_phone
-                      ? formatPhone(patient.emergency_contact_phone)
-                      : null
-                  }
-                />
-              </>
-            )}
-          </Card>
-        </View>
+            <View style={{ width: '100%', height: 1, backgroundColor: theme.colors.border }} />
 
-        {/* Notes */}
-        {patient.notes && (
-          <View>
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: '700',
-                color: theme.colors.text.tertiary,
-                textTransform: 'uppercase',
-                letterSpacing: 1,
-                marginBottom: theme.spacing.sm,
-              }}
-            >
-              Notas clínicas
-            </Text>
+            {/* 1ª consulta */}
+            <View style={{ width: '100%', flexDirection: 'row' }}>
+              <FichaItem label="1ª Consulta" value="—" />
+              <FichaItem label="Valor" value="—" />
+            </View>
+
+            <View style={{ width: '100%', height: 1, backgroundColor: theme.colors.borderLight }} />
+
+            {/* Última consulta */}
+            <View style={{ width: '100%', flexDirection: 'row' }}>
+              <FichaItem label="Última Consulta" value="—" />
+              <FichaItem label="Valor" value="—" />
+            </View>
+
+            <View style={{ width: '100%', height: 1, backgroundColor: theme.colors.borderLight }} />
+
+            {/* Próxima consulta */}
+            <View style={{ width: '100%', flexDirection: 'row' }}>
+              <FichaItem label="Próxima Consulta" value="—" />
+            </View>
+
+          </View>
+        </Card>
+
+        {/* ── Contato ──────────────────────────────────────────────── */}
+        <SectionTitle title="Contato" />
+        <Card>
+          <InfoRow icon="mail-outline" label="E-mail" value={patient.email} />
+          <InfoRow icon="call-outline" label="Telefone" value={patient.phone ? formatPhone(patient.phone) : null} />
+          <InfoRow icon="phone-portrait-outline" label="Telefone alternativo" value={null} />
+          {(patient.emergency_contact_name || patient.emergency_contact_phone) && (
+            <>
+              <Divider />
+              <ContactInfoRow icon="alert-circle-outline" label="Contato de emergência" name={patient.emergency_contact_name} phone={patient.emergency_contact_phone ? formatPhone(patient.emergency_contact_phone) : null} />
+            </>
+          )}
+          {(patient.tutor_name || patient.tutor_phone || patient.tutor_email) && (
+            <>
+              <Divider />
+              <ContactInfoRow icon="people-outline" label="Responsável" name={patient.tutor_name} phone={patient.tutor_phone ? formatPhone(patient.tutor_phone) : null} email={patient.tutor_email} />
+            </>
+          )}
+          {(patient.spouse_name || patient.spouse_phone || patient.spouse_email) && (
+            <>
+              <Divider />
+              <ContactInfoRow icon="heart-outline" label="Cônjuge" name={patient.spouse_name} phone={patient.spouse_phone ? formatPhone(patient.spouse_phone) : null} email={patient.spouse_email} />
+            </>
+          )}
+        </Card>
+
+        {/* ── Informações pessoais ──────────────────────────────────── */}
+        <SectionTitle title="Informações pessoais" />
+        <Card>
+          <InfoRow
+            icon="calendar-outline"
+            label="Data de nascimento"
+            value={patient.date_of_birth
+              ? `${formatDate(patient.date_of_birth)}${calcAge(patient.date_of_birth) ? ` · ${calcAge(patient.date_of_birth)}` : ''}`
+              : null}
+          />
+          <InfoRow
+            icon="transgender-outline"
+            label="Gênero"
+            value={
+              patient.gender_id
+                ? (gendersData.find((g) => g.id === patient.gender_id)?.name ?? null)
+                : patient.gender ? GENDER_LABEL[patient.gender] : null
+            }
+          />
+          <InfoRow
+            icon="ribbon-outline"
+            label="Estado civil"
+            value={patient.civil_status_id
+              ? (civilStatuses.find((c) => c.id === patient.civil_status_id)?.name ?? null)
+              : null}
+          />
+          <InfoRow icon="briefcase-outline" label="Profissão" value={patient.profession ?? null} />
+          <InfoRow icon="school-outline" label="Escolaridade" value={patient.education ?? null} />
+          <Divider />
+          <InfoRow
+            icon="card-outline"
+            label={patient.document_type === 'nif' ? 'NIF' : patient.document_type === 'cpf' ? 'CPF' : patient.document_type ? 'Documento' : 'CPF/NIF'}
+            value={
+              patient.document_number
+                ? formatDocument(patient.document_number, patient.document_type)
+                : patient.cpf ? formatCpf(patient.cpf)   // fallback dados antigos
+                : patient.nif ? patient.nif
+                : null
+            }
+          />
+          <InfoRow icon="medkit-outline" label="N.º Utente SNS" value={patient.sns_user_number ?? null} />
+          <InfoRow icon="document-text-outline" label="Protocolo local" value={patient.local_protocol ?? null} />
+          <Divider />
+          <InfoRow icon="location-outline" label="Morada" value={patient.address ?? null} />
+          <InfoRow icon="home-outline" label="Morada de faturação" value={patient.billing_address ?? null} />
+          <InfoRow icon="mail-outline" label="Código postal" value={patient.postal_code ?? null} />
+          <InfoRow icon="business-outline" label="Cidade" value={patient.city ?? null} />
+        </Card>
+
+        {/* ── Seguro / Plano ────────────────────────────────────────── */}
+        {(patient.insurer_id || patient.plan_name) && (
+          <>
+            <SectionTitle title="Seguro de saúde" />
             <Card>
-              <Text
-                style={{
-                  fontSize: 15,
-                  color: theme.colors.text.primary,
-                  lineHeight: 22,
-                }}
-              >
+              <InfoRow
+                icon="shield-checkmark-outline"
+                label="Seguradora"
+                value={patient.insurer_id ? (insurers.find((i) => i.id === patient.insurer_id)?.name ?? null) : null}
+              />
+              <InfoRow
+                icon="list-outline"
+                label="Plano / Modalidade"
+                value={patient.plan_name ?? null}
+              />
+            </Card>
+          </>
+        )}
+
+        {/* ── Consentimentos ────────────────────────────────────────── */}
+        <SectionTitle title="Consentimentos" />
+        <Card>
+          <ConsentRow label="RGPD / Proteção de dados" granted={patient.consent_rgpd} />
+          <ConsentRow label="Consentimento informado" granted={patient.consent_informed} />
+          <ConsentRow label="Autorização de menores" granted={patient.consent_minors} />
+        </Card>
+
+        {/* ── Notas clínicas ────────────────────────────────────────── */}
+        {patient.notes && (
+          <>
+            <SectionTitle title="Notas clínicas" />
+            <Card>
+              <Text style={{ ...theme.typography.body, color: theme.colors.text.primary, lineHeight: 22 }}>
                 {patient.notes}
               </Text>
             </Card>
-          </View>
+          </>
         )}
 
-        {/* Sessions placeholder */}
-        <View>
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '700',
-              color: theme.colors.text.tertiary,
-              textTransform: 'uppercase',
-              letterSpacing: 1,
-              marginBottom: theme.spacing.sm,
-            }}
-          >
-            Sessões
-          </Text>
-          <Card>
-            <View
-              style={{
-                alignItems: 'center',
-                paddingVertical: theme.spacing.lg,
-                gap: 8,
-              }}
-            >
-              <Ionicons
-                name="calendar-outline"
-                size={36}
-                color={theme.colors.text.tertiary}
-              />
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: theme.colors.text.secondary,
-                  textAlign: 'center',
-                }}
-              >
-                Histórico de sessões em breve.{'\n'}Esta funcionalidade está
-                sendo desenvolvida.
-              </Text>
-            </View>
-          </Card>
-        </View>
-
-        {/* Delete button */}
+        {/* ── Excluir ───────────────────────────────────────────────── */}
         <TouchableOpacity
           onPress={handleDelete}
           style={{
@@ -501,22 +779,26 @@ export default function PatientDetailScreen() {
             borderRadius: theme.radius.lg,
             borderWidth: 1.5,
             borderColor: theme.colors.error + '60',
-            backgroundColor: '#FEE2E2',
+            backgroundColor: theme.colors.errorLight,
           }}
         >
           <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
-          <Text
-            style={{
-              color: theme.colors.error,
-              fontSize: 15,
-              fontWeight: '600',
-            }}
-          >
+          <Text style={{ color: theme.colors.error, fontSize: 15, fontWeight: '600' }}>
             Excluir paciente
           </Text>
         </TouchableOpacity>
       </ScrollView>
 
+      )}
+
+      {/* Photo viewer */}
+      {patient.photo_url && (
+        <PhotoViewer
+          visible={photoViewerVisible}
+          uri={patient.photo_url}
+          patientName={patient.preferred_name ?? patient.full_name}
+          onClose={() => setPhotoViewerVisible(false)}
+        />
       )}
 
       {/* Edit modal */}
@@ -563,6 +845,7 @@ export default function PatientDetailScreen() {
           </View>
 
           <PatientForm
+            patientId={patient.id}
             initialData={patient}
             onSubmit={handleUpdate}
             isLoading={updateMutation.isPending}

@@ -263,7 +263,6 @@ export const DEFAULT_SEND_MESSAGE = `Olá <<nome_paciente>>, tudo bem?
 
 📋 Formulário: <<nome_formulario>>
 🔗 Link de acesso: <<link>>
-🔑 Senha: <<senha>>
 📅 Prazo: <<data_limite>>
 
 Preencha com calma e honestidade. Suas respostas são confidenciais.`

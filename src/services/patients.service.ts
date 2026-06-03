@@ -28,7 +28,7 @@ export const patientsService = {
       if (filters?.search) {
         const q = `%${filters.search.toLowerCase()}%`
         query = query.or(
-          `full_name.ilike.${q},phone.ilike.${q},email.ilike.${q},cpf.ilike.${q},nif.ilike.${q},tutor_name.ilike.${q}`,
+          `full_name.ilike.${q},phone.ilike.${q},email.ilike.${q},document_number.ilike.${q},tutor_name.ilike.${q}`,
         )
       }
 

@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState } from 'react'
+import React, { memo, useCallback, useState, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   Platform,
   Switch,
   Alert,
+  findNodeHandle,
+  UIManager,
 } from 'react-native'
-import { useForm, Controller, useFieldArray } from 'react-hook-form'
+import { useForm, Controller, useFieldArray, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { format, parseISO, isValid } from 'date-fns'
@@ -18,16 +20,18 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { theme } from '@/constants/theme'
 import { patientSchema, PatientSchemaData } from '@/utils/validators'
-import { maskCpf, maskNif, maskPhone } from '@/utils/format'
+import { maskPhone, maskDocument } from '@/utils/format'
 import {
   STATUS_OPTIONS,
   EDUCATION_OPTIONS,
   Patient,
 } from '@/types/app.types'
-import { useCivilStatuses, useInsurers, usePlans } from '@/hooks/useLookups'
+import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
 import { useGenders } from '@/hooks/useGenders'
+import { PatientPhotoEditor } from './PatientPhotoEditor'
 
 interface PatientFormProps {
+  patientId?: string          // obrigatório para edição de foto; ausente em novo paciente
   initialData?: Partial<Patient>
   onSubmit: (data: PatientSchemaData) => Promise<void>
   isLoading?: boolean
@@ -246,6 +250,7 @@ function ConsentRow({
 }
 
 export const PatientForm = memo(function PatientForm({
+  patientId,
   initialData,
   onSubmit,
   isLoading = false,
@@ -259,7 +264,41 @@ export const PatientForm = memo(function PatientForm({
   const { data: civilStatuses } = useCivilStatuses()
   const { data: insurers } = useInsurers()
   const { data: plans } = usePlans(selectedInsurerId || undefined)
+  const { data: countries = [] } = useCountries()
+  const { data: practiceLocations = [] } = usePracticeLocations()
   const { data: gendersData = [] } = useGenders()
+
+  const scrollViewRef = useRef<ScrollView>(null)
+  const fieldRefs = useRef<Partial<Record<string, View | null>>>({})
+
+  // Ordem visual dos campos que podem ter erros — usada para scroll automático
+  const FIELD_ORDER: (keyof PatientSchemaData)[] = [
+    'full_name',
+    'email',
+    'document_number',
+    'country_id',
+    'practice_location_id',
+    'spouse_email',
+    'tutor_email',
+  ]
+
+  const scrollToFirstError = useCallback((errs: FieldErrors<PatientSchemaData>) => {
+    const firstField = FIELD_ORDER.find((f) => !!errs[f])
+    if (!firstField) return
+    const fieldRef = fieldRefs.current[firstField]
+    if (!fieldRef || !scrollViewRef.current) return
+    const fieldNode = findNodeHandle(fieldRef)
+    const scrollNode = findNodeHandle(scrollViewRef.current)
+    if (!fieldNode || !scrollNode) return
+    UIManager.measureLayout(
+      fieldNode,
+      scrollNode,
+      () => {},
+      (_x, y) => {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 16), animated: true })
+      },
+    )
+  }, [])
 
   const {
     control,
@@ -286,23 +325,30 @@ export const PatientForm = memo(function PatientForm({
       phone: initialData?.phone ?? '',
       phone_ddi: (initialData as any)?.phone_ddi ?? '',
 
-      // Documents
-      cpf: initialData?.cpf ?? '',
-      nif: initialData?.nif ?? '',
+      // Document
+      document_type: (initialData?.document_type as 'cpf' | 'nif' | 'other') ?? 'cpf',
+      document_number: initialData?.document_number
+        ?? initialData?.cpf  // fallback dados antigos
+        ?? initialData?.nif
+        ?? '',
 
       // Address
       address: initialData?.address ?? '',
       billing_address: initialData?.billing_address ?? '',
       postal_code: initialData?.postal_code ?? '',
       city: initialData?.city ?? '',
+      country_id: initialData?.country_id ?? '',
+      practice_location_id: initialData?.practice_location_id ?? '',
 
       // Spouse
       spouse_name: initialData?.spouse_name ?? '',
+      spouse_phone_ddi: initialData?.spouse_phone_ddi ?? '',
       spouse_phone: initialData?.spouse_phone ?? '',
       spouse_email: initialData?.spouse_email ?? '',
 
       // Tutor
       tutor_name: initialData?.tutor_name ?? '',
+      tutor_phone_ddi: initialData?.tutor_phone_ddi ?? '',
       tutor_phone: initialData?.tutor_phone ?? '',
       tutor_email: initialData?.tutor_email ?? '',
 
@@ -311,11 +357,13 @@ export const PatientForm = memo(function PatientForm({
 
       // Emergency contact
       emergency_contact_name: initialData?.emergency_contact_name ?? '',
+      emergency_contact_phone_ddi: initialData?.emergency_contact_phone_ddi ?? '',
       emergency_contact_phone: initialData?.emergency_contact_phone ?? '',
 
       // Health coverage
       insurer_id: initialData?.insurer_id ?? '',
       plan_id: initialData?.plan_id ?? '',
+      plan_name: initialData?.plan_name ?? '',
       sns_user_number: initialData?.sns_user_number ?? '',
       local_protocol: initialData?.local_protocol ?? '',
 
@@ -333,8 +381,19 @@ export const PatientForm = memo(function PatientForm({
     useFieldArray({ control, name: 'additional_contacts' })
 
   const dobValue = watch('date_of_birth')
-  const cpfValue = watch('cpf')
-  const nifValue = watch('nif')
+  const countryIdValue = watch('country_id')
+
+  // Auto-fill DDI when country changes
+  useEffect(() => {
+    if (!countryIdValue || !countries?.length) return
+    const country = countries.find((c) => c.id === countryIdValue)
+    if (!country?.ddi) return
+    const ddi = country.ddi.startsWith('+') ? country.ddi : `+${country.ddi}`
+    setValue('phone_ddi', ddi)
+    setValue('spouse_phone_ddi', ddi)
+    setValue('tutor_phone_ddi', ddi)
+    setValue('emergency_contact_phone_ddi', ddi)
+  }, [countryIdValue, countries, setValue])
 
   const handleDateChange = useCallback(
     (_: unknown, selectedDate?: Date) => {
@@ -369,35 +428,45 @@ export const PatientForm = memo(function PatientForm({
     ...(plans ?? []).map((p) => ({ label: p.name, value: p.id })),
   ]
 
-  const hasCpf = cpfValue && cpfValue.replace(/\D/g, '').length > 0
-  const hasNif = nifValue && nifValue.replace(/\D/g, '').length > 0
 
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={{ padding: theme.spacing.md, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* ── FOTO ── */}
+        {patientId && (
+          <PatientPhotoEditor
+            patientId={patientId}
+            patientName={initialData?.full_name ?? ''}
+            photoUrl={initialData?.photo_url}
+          />
+        )}
+
         {/* ── IDENTIFICAÇÃO ── */}
         <SectionHeader title="Identificação" />
         <Card>
-          <Controller
-            control={control}
-            name="full_name"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Nome completo *"
-                placeholder="Nome do paciente"
-                leftIcon="person-outline"
-                autoCapitalize="words"
-                onChangeText={onChange}
-                onBlur={onBlur}
-                value={value}
-                error={errors.full_name?.message}
-              />
-            )}
-          />
+          <View ref={(r) => { fieldRefs.current.full_name = r }}>
+            <Controller
+              control={control}
+              name="full_name"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Nome completo *"
+                  placeholder="Nome do paciente"
+                  leftIcon="person-outline"
+                  autoCapitalize="words"
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  value={value}
+                  error={errors.full_name?.message}
+                />
+              )}
+            />
+          </View>
 
           <Controller
             control={control}
@@ -519,69 +588,43 @@ export const PatientForm = memo(function PatientForm({
           />
 
           {/* Status */}
-          <View>
-            <Text style={labelStyle}>Status</Text>
-            <Controller
-              control={control}
-              name="status"
-              render={({ field: { onChange, value } }) => (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {STATUS_OPTIONS.map((opt) => {
-                    const selected = value === opt.value
-                    return (
-                      <TouchableOpacity
-                        key={opt.value}
-                        onPress={() => onChange(opt.value)}
-                        style={{
-                          flex: 1,
-                          paddingVertical: 8,
-                          borderRadius: theme.radius.md,
-                          backgroundColor: selected
-                            ? theme.colors.primary
-                            : theme.colors.surfaceSecondary,
-                          alignItems: 'center',
-                          borderWidth: 1,
-                          borderColor: selected ? theme.colors.primary : theme.colors.border,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 13,
-                            fontWeight: selected ? '600' : '400',
-                            color: selected ? '#FFFFFF' : theme.colors.text.secondary,
-                          }}
-                        >
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
-              )}
-            />
-          </View>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="Status"
+                options={STATUS_OPTIONS}
+                value={value}
+                onChange={onChange}
+                placeholder="Selecionar status..."
+              />
+            )}
+          />
         </Card>
 
         {/* ── CONTACTO ── */}
         <SectionHeader title="Contacto" />
         <Card>
-          <Controller
-            control={control}
-            name="email"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="E-mail"
-                placeholder="email@exemplo.com"
-                leftIcon="mail-outline"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                onChangeText={onChange}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.email?.message}
-              />
-            )}
-          />
+          <View ref={(r) => { fieldRefs.current.email = r }}>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="E-mail"
+                  placeholder="email@exemplo.com"
+                  leftIcon="mail-outline"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  value={value ?? ''}
+                  error={errors.email?.message}
+                />
+              )}
+            />
+          </View>
 
           {/* Phone + DDI */}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -592,7 +635,7 @@ export const PatientForm = memo(function PatientForm({
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     label="DDI"
-                    placeholder="+351"
+                    
                     keyboardType="phone-pad"
                     onChangeText={onChange}
                     onBlur={onBlur}
@@ -608,7 +651,7 @@ export const PatientForm = memo(function PatientForm({
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     label="Telefone"
-                    placeholder="912 345 678"
+                    placeholder="Ex: 912 345 678"
                     leftIcon="call-outline"
                     keyboardType="phone-pad"
                     onChangeText={(v) => onChange(maskPhone(v))}
@@ -622,61 +665,47 @@ export const PatientForm = memo(function PatientForm({
           </View>
         </Card>
 
-        {/* ── DOCUMENTOS ── */}
-        <SectionHeader title="Documentos" />
+        {/* ── DOCUMENTO ── */}
+        <SectionHeader title="Documento de identificação" />
         <Card>
-          {!hasCpf && !hasNif && (
-            <View
-              style={{
-                backgroundColor: '#FEF3C7',
-                borderRadius: theme.radius.md,
-                padding: theme.spacing.sm,
-                marginBottom: theme.spacing.md,
-                flexDirection: 'row',
-                gap: 8,
-                alignItems: 'flex-start',
+          <Controller
+            control={control}
+            name="document_type"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="Tipo de documento"
+                options={[
+                  { label: 'CPF (Brasil)', value: 'cpf' },
+                  { label: 'NIF (Portugal)', value: 'nif' },
+                  { label: 'Outro', value: 'other' },
+                ]}
+                value={value ?? 'cpf'}
+                onChange={onChange}
+              />
+            )}
+          />
+          <View ref={(r) => { fieldRefs.current.document_number = r }}>
+            <Controller
+              control={control}
+              name="document_number"
+              render={({ field: { onChange, onBlur, value }, fieldState }) => {
+                const type = watch('document_type')
+                const placeholder = type === 'cpf' ? '000.000.000-00' : type === 'nif' ? '000 000 000' : 'Número do documento'
+                return (
+                  <Input
+                    label="Número do documento"
+                    placeholder={placeholder}
+                    leftIcon="card-outline"
+                    keyboardType="numeric"
+                    onChangeText={(v) => onChange(maskDocument(v, type))}
+                    onBlur={onBlur}
+                    value={value ?? ''}
+                    error={fieldState.error?.message ?? errors.document_number?.message}
+                  />
+                )
               }}
-            >
-              <Ionicons name="information-circle-outline" size={18} color="#D97706" />
-              <Text style={{ fontSize: 13, color: '#92400E', flex: 1, lineHeight: 18 }}>
-                Informe CPF ou NIF para identificação em faturação.
-              </Text>
-            </View>
-          )}
-
-          <Controller
-            control={control}
-            name="cpf"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="CPF (Brasil)"
-                placeholder="000.000.000-00"
-                leftIcon="card-outline"
-                keyboardType="numeric"
-                onChangeText={(v) => onChange(maskCpf(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.cpf?.message}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="nif"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="NIF (Portugal)"
-                placeholder="000 000 000"
-                leftIcon="card-outline"
-                keyboardType="numeric"
-                onChangeText={(v) => onChange(maskNif(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.nif?.message}
-              />
-            )}
-          />
+            />
+          </View>
         </Card>
 
         {/* ── MORADA ── */}
@@ -752,6 +781,27 @@ export const PatientForm = memo(function PatientForm({
               />
             </View>
           </View>
+
+          <View ref={(r) => { fieldRefs.current.country_id = r }}>
+            <Controller
+              control={control}
+              name="country_id"
+              render={({ field: { onChange, value } }) => (
+                <SelectDropdown
+                  label="País *"
+                  options={countries.map((c) => ({ label: c.name, value: c.id }))}
+                  value={value ?? ''}
+                  onChange={onChange}
+                  placeholder="Selecionar país..."
+                />
+              )}
+            />
+            {errors.country_id && (
+              <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8, marginBottom: 8 }}>
+                {errors.country_id.message}
+              </Text>
+            )}
+          </View>
         </Card>
 
         {/* ── CÔNJUGE / COMPANHEIR@ ── */}
@@ -773,22 +823,18 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="spouse_phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Contacto"
-                placeholder="(11) 99999-9999"
-                leftIcon="call-outline"
-                keyboardType="phone-pad"
-                onChangeText={(v) => onChange(maskPhone(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.spouse_phone?.message}
-              />
-            )}
-          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ width: 90 }}>
+              <Controller control={control} name="spouse_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="DDI"  keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="spouse_phone" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Contacto" placeholder="Ex: 912 345 678" leftIcon="call-outline" keyboardType="phone-pad" onChangeText={(v) => onChange(maskPhone(v))} onBlur={onBlur} value={value ?? ''} error={errors.spouse_phone?.message} />
+              )} />
+            </View>
+          </View>
           <Controller
             control={control}
             name="spouse_email"
@@ -827,22 +873,18 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="tutor_phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Contacto do responsável"
-                placeholder="(11) 99999-9999"
-                leftIcon="call-outline"
-                keyboardType="phone-pad"
-                onChangeText={(v) => onChange(maskPhone(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.tutor_phone?.message}
-              />
-            )}
-          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ width: 90 }}>
+              <Controller control={control} name="tutor_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="DDI"  keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="tutor_phone" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Contacto do responsável" placeholder="Ex: 912 345 678" leftIcon="call-outline" keyboardType="phone-pad" onChangeText={(v) => onChange(maskPhone(v))} onBlur={onBlur} value={value ?? ''} error={errors.tutor_phone?.message} />
+              )} />
+            </View>
+          </View>
           <Controller
             control={control}
             name="tutor_email"
@@ -932,7 +974,7 @@ export const PatientForm = memo(function PatientForm({
                 render={({ field: { onChange, onBlur, value } }) => (
                   <Input
                     label="Telefone"
-                    placeholder="(11) 99999-9999"
+                    placeholder="Ex: 351 912 345 678"
                     keyboardType="phone-pad"
                     onChangeText={(v) => onChange(maskPhone(v))}
                     onBlur={onBlur}
@@ -1000,22 +1042,18 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="emergency_contact_phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Telefone"
-                placeholder="(11) 99999-9999"
-                leftIcon="call-outline"
-                keyboardType="phone-pad"
-                onChangeText={(v) => onChange(maskPhone(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.emergency_contact_phone?.message}
-              />
-            )}
-          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ width: 90 }}>
+              <Controller control={control} name="emergency_contact_phone_ddi" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="DDI"  keyboardType="phone-pad" onChangeText={onChange} onBlur={onBlur} value={value ?? ''} />
+              )} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Controller control={control} name="emergency_contact_phone" render={({ field: { onChange, onBlur, value } }) => (
+                <Input label="Telefone" placeholder="Ex: 912 345 678" leftIcon="call-outline" keyboardType="phone-pad" onChangeText={(v) => onChange(maskPhone(v))} onBlur={onBlur} value={value ?? ''} error={errors.emergency_contact_phone?.message} />
+              )} />
+            </View>
+          </View>
         </Card>
 
         {/* ── COBERTURA / PROTOCOLO ── */}
@@ -1052,14 +1090,17 @@ export const PatientForm = memo(function PatientForm({
 
           <Controller
             control={control}
-            name="plan_id"
-            render={({ field: { onChange, value } }) => (
-              <SelectDropdown
+            name="plan_name"
+            render={({ field: { onChange, onBlur, value } }) => (
+              <Input
                 label="Plano / Modalidade"
-                options={planOptions}
+                placeholder="Ex: Saúde 24, Básico, Premium..."
+                leftIcon="list-outline"
+                autoCapitalize="words"
+                onChangeText={onChange}
+                onBlur={onBlur}
                 value={value ?? ''}
-                onChange={onChange}
-                placeholder="Sem plano específico"
+                error={errors.plan_name?.message}
               />
             )}
           />
@@ -1097,6 +1138,31 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+        </Card>
+
+        {/* ── LOCAL DE PRÁTICA ── */}
+        <SectionHeader title="Local de prática" />
+        <Card>
+          <View ref={(r) => { fieldRefs.current.practice_location_id = r }}>
+            <Controller
+              control={control}
+              name="practice_location_id"
+              render={({ field: { onChange, value } }) => (
+                <SelectDropdown
+                  label="Local de prática *"
+                  options={practiceLocations.map((l) => ({ label: l.name, value: l.id }))}
+                  value={value ?? ''}
+                  onChange={onChange}
+                  placeholder="Selecionar local..."
+                />
+              )}
+            />
+            {errors.practice_location_id && (
+              <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8 }}>
+                {errors.practice_location_id.message}
+              </Text>
+            )}
+          </View>
         </Card>
 
         {/* ── CONSENTIMENTOS ── */}
@@ -1175,7 +1241,7 @@ export const PatientForm = memo(function PatientForm({
       >
         <Button
           title={submitLabel}
-          onPress={handleSubmit(onSubmit)}
+          onPress={handleSubmit(onSubmit, scrollToFirstError)}
           loading={isLoading}
           fullWidth
           size="lg"

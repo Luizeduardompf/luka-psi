@@ -74,13 +74,62 @@ export default function PublicFormPage() {
 
   // Respostas locais (acumuladas enquanto preenche)
   const [responses, setResponses] = useState<Map<string, Partial<FormResponse>>>(new Map())
-  const [isSaving, setIsSaving] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [requiredErrors, setRequiredErrors] = useState<Set<string>>(new Set())
+  const [fieldErrors, setFieldErrors] = useState<Map<string, string>>(new Map())
 
-  // Auto-save debounce
-  const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  // Auto-save: batch único após 5s de inatividade
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const dirtyRef = useRef<Set<string>>(new Set())       // questionIds com mudanças não salvas
+  const responsesRef = useRef(responses)                 // ref sempre actualizada
+  const submissionRef = useRef<typeof submission>(null)  // ref para submission
+  const batchSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { responsesRef.current = responses }, [responses])
+  useEffect(() => { submissionRef.current = submission }, [submission])
+
+  // Flush imediato (para beforeunload — usa fetch sync ou beacon)
+  const flushDirty = useCallback(async () => {
+    const sub = submissionRef.current
+    if (!sub?.id || dirtyRef.current.size === 0) return
+    const toSave = Array.from(dirtyRef.current)
+    dirtyRef.current.clear()
+    await Promise.all(toSave.map((qId) => {
+      const r = responsesRef.current.get(qId)
+      if (!r) return Promise.resolve()
+      return formsService.saveResponse({
+        submission_id: sub.id,
+        question_id: qId,
+        answer_text: r.answer_text ?? null,
+        answer_options: r.answer_options ?? null,
+        answer_number: r.answer_number ?? null,
+        answer_date: r.answer_date ?? null,
+        answer_boolean: r.answer_boolean ?? null,
+      })
+    }))
+  }, [])
+
+  const scheduleBatchSave = useCallback(() => {
+    if (batchSaveTimer.current) clearTimeout(batchSaveTimer.current)
+    batchSaveTimer.current = setTimeout(async () => {
+      setSaveStatus('saving')
+      await flushDirty()
+      setSaveStatus('saved')
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }, 2000) // 2s de inatividade
+  }, [flushDirty])
+
+  // Salva ao fechar/recarregar a aba (web)
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    const handleUnload = () => {
+      if (batchSaveTimer.current) clearTimeout(batchSaveTimer.current)
+      void flushDirty()
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    return () => window.removeEventListener('beforeunload', handleUnload)
+  }, [flushDirty])
 
   useEffect(() => {
     if (!token) {
@@ -219,63 +268,87 @@ export default function PublicFormPage() {
         updated.set(questionId, { ...(prev.get(questionId) ?? {}), ...partial, question_id: questionId })
         return updated
       })
-
-      // Auto-save com debounce 1.5s
-      if (saveTimers.current.has(questionId)) {
-        clearTimeout(saveTimers.current.get(questionId)!)
-      }
-      const timer = setTimeout(async () => {
-        if (!submission?.id) return
-        const resp = { ...(responses.get(questionId) ?? {}), ...partial, question_id: questionId }
-        await formsService.saveResponse({
-          submission_id: submission.id,
-          question_id: questionId,
-          answer_text: resp.answer_text ?? null,
-          answer_options: resp.answer_options ?? null,
-          answer_number: resp.answer_number ?? null,
-          answer_date: resp.answer_date ?? null,
-          answer_boolean: resp.answer_boolean ?? null,
-        })
-      }, 1500)
-      saveTimers.current.set(questionId, timer)
+      // Marca como dirty e agenda batch save
+      dirtyRef.current.add(questionId)
+      scheduleBatchSave()
+      // Limpa erros ao editar
+      setFieldErrors((prev) => {
+        if (!prev.has(questionId)) return prev
+        const next = new Map(prev)
+        next.delete(questionId)
+        return next
+      })
+      setRequiredErrors((prev) => {
+        if (!prev.has(questionId)) return prev
+        const next = new Set(prev)
+        next.delete(questionId)
+        return next
+      })
     },
-    [submission?.id, responses],
+    [scheduleBatchSave],
   )
 
   async function handleComplete() {
     if (!submission) return
     setSubmitError(null)
+    setFieldErrors(new Map())
+    setRequiredErrors(new Set())
 
-    // Client-side required field check before saving
     const snap = submission.snapshot
-    const requiredIds = snap.questions.filter((q) => q.is_required).map((q) => q.id)
+    const newFieldErrors = new Map<string, string>()
+    const newMissing = new Set<string>()
 
     const hasAnswer = (r: Partial<FormResponse> | undefined): boolean => {
       if (!r) return false
-      if (r.answer_text !== null && r.answer_text !== undefined && r.answer_text.trim() !== '') return true
-      if (r.answer_options !== null && r.answer_options !== undefined && (r.answer_options as unknown[]).length > 0) return true
-      if (r.answer_number !== null && r.answer_number !== undefined) return true
-      if (r.answer_date !== null && r.answer_date !== undefined) return true
-      if (r.answer_boolean !== null && r.answer_boolean !== undefined) return true
+      if (r.answer_text != null && r.answer_text.trim() !== '') return true
+      if (r.answer_options != null && (r.answer_options as unknown[]).length > 0) return true
+      if (r.answer_number != null) return true
+      if (r.answer_date != null) return true
+      if (r.answer_boolean != null) return true
       return false
     }
 
-    const missing = requiredIds.filter((id) => !hasAnswer(responses.get(id)))
+    // Validar cada pergunta
+    for (const q of snap.questions) {
+      const r = responses.get(q.id)
 
-    if (missing.length > 0) {
-      setRequiredErrors(new Set(missing))
-      const missingTitles = snap.questions
-        .filter((q) => missing.includes(q.id))
-        .map((q) => q.title)
-      setSubmitError(`Por favor responda as perguntas obrigatórias: ${missingTitles.join(', ')}`)
-      // Scroll to first missing question
+      // Validar formato de data
+      if (q.type === 'date' && r?.answer_date) {
+        // Se não está em ISO (YYYY-MM-DD), é inválido
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(r.answer_date)) {
+          newFieldErrors.set(q.id, 'Data inválida. Use o formato DD/MM/AAAA.')
+        }
+      }
+
+      // Obrigatório sem resposta
+      if (q.is_required && !hasAnswer(r)) {
+        newMissing.add(q.id)
+      }
+    }
+
+    if (newFieldErrors.size > 0 || newMissing.size > 0) {
+      setFieldErrors(newFieldErrors)
+      setRequiredErrors(newMissing)
+
+      const dateProblems = snap.questions
+        .filter((q) => newFieldErrors.has(q.id))
+        .map((q) => `"${q.title}": data inválida`)
+
+      const missingProblems = snap.questions
+        .filter((q) => newMissing.has(q.id))
+        .map((q) => `"${q.title}" é obrigatório`)
+
+      setSubmitError([...missingProblems, ...dateProblems].join('\n'))
       return
     }
 
-    setRequiredErrors(new Set())
     setIsSubmitting(true)
 
-    // Salvar todas as respostas pendentes
+    // Cancelar batch save pendente — vamos salvar tudo agora
+    if (batchSaveTimer.current) clearTimeout(batchSaveTimer.current)
+    dirtyRef.current.clear()
+
+    // Salvar todas as respostas de uma vez no submit
     const allResponses = Array.from(responses.entries()).map(([questionId, r]) => ({
       ...(r as FormResponse),
       question_id: questionId,
@@ -299,7 +372,7 @@ export default function PublicFormPage() {
     )
 
     if (result.error) {
-      setSubmitError(result.error)
+      setSubmitError('Ocorreu um erro ao enviar o formulário. Por favor tente novamente.')
       setIsSubmitting(false)
       return
     }
@@ -724,9 +797,14 @@ export default function PublicFormPage() {
               Prazo: {new Date(snap.expires_at).toLocaleDateString('pt-BR')}
             </Text>
           )}
-          {isSaving && (
+          {saveStatus === 'saving' && (
             <Text style={{ fontSize: 11, color: theme.colors.text.tertiary }}>
-              Salvando...
+              A guardar...
+            </Text>
+          )}
+          {saveStatus === 'saved' && (
+            <Text style={{ fontSize: 11, color: theme.colors.success }}>
+              ✓ Guardado
             </Text>
           )}
         </View>
@@ -779,7 +857,9 @@ export default function PublicFormPage() {
                     </View>
                   )}
                   {sectionQuestions.map((q: SnapshotQuestion) => {
-                    const hasError = requiredErrors.has(q.id)
+                    const isRequired = requiredErrors.has(q.id)
+                    const fieldErr = fieldErrors.get(q.id) ?? null
+                    const hasError = isRequired || !!fieldErr
                     return (
                       <View
                         key={q.id}
@@ -792,24 +872,16 @@ export default function PublicFormPage() {
                           borderColor: hasError ? theme.colors.error : theme.colors.border,
                         }}
                       >
-                        {hasError && (
+                        {isRequired && (
                           <Text style={{ fontSize: 11, color: theme.colors.error, marginBottom: 4, fontWeight: '600' }}>
-                            Campo obrigatório
+                            ⚠ Campo obrigatório
                           </Text>
                         )}
                         <QuestionRenderer
                           question={q}
                           response={(responses.get(q.id) as FormResponse) ?? null}
-                          onChange={(partial) => {
-                            handleResponseChange(q.id, partial)
-                            if (hasError) {
-                              setRequiredErrors((prev) => {
-                                const next = new Set(prev)
-                                next.delete(q.id)
-                                return next
-                              })
-                            }
-                          }}
+                          onChange={(partial) => handleResponseChange(q.id, partial)}
+                          error={fieldErr}
                         />
                       </View>
                     )
@@ -835,12 +907,17 @@ export default function PublicFormPage() {
         >
           {submitError ? (
             <View style={{
-              backgroundColor: '#FEF2F2', borderRadius: 8, padding: 10,
-              borderWidth: 1, borderColor: '#FECACA',
+              backgroundColor: '#FEF2F2', borderRadius: 8, padding: 12,
+              borderWidth: 1, borderColor: '#FECACA', gap: 4,
             }}>
-              <Text style={{ fontSize: 13, color: '#DC2626', lineHeight: 18 }}>
-                {submitError}
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626', marginBottom: 4 }}>
+                ⚠ Corrija os erros antes de enviar:
               </Text>
+              {submitError.split('\n').map((line, i) => (
+                <Text key={i} style={{ fontSize: 13, color: '#DC2626', lineHeight: 18 }}>
+                  · {line}
+                </Text>
+              ))}
             </View>
           ) : null}
           <Button

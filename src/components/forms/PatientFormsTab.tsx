@@ -89,7 +89,6 @@ export function PatientFormsTab({ patientId, patientName }: Props) {
                     fontWeight: '700',
                     color: theme.colors.text.primary,
                   }}
-                  numberOfLines={1}
                 >
                   {snapshot.template_title}
                 </Text>
@@ -105,10 +104,12 @@ export function PatientFormsTab({ patientId, patientName }: Props) {
             {/* Metadados */}
             <Card style={{ marginBottom: 20, gap: 8 }}>
               <MetaRow label="Enviado em" value={formatDateTime(selectedDetail.created_at)} />
-              <MetaRow label="Primeiro acesso" value={formatDateTime(selectedDetail.first_opened_at)} />
-              <MetaRow label="Último acesso" value={formatDateTime(selectedDetail.last_opened_at)} />
-              <MetaRow label="Concluído em" value={formatDateTime(selectedDetail.completed_at)} />
-              {selectedDetail.expires_at && (
+              {selectedDetail.status === 'completed' ? (
+                <MetaRow label="Concluído em" value={formatDateTime(selectedDetail.completed_at)} />
+              ) : selectedDetail.first_opened_at ? (
+                <MetaRow label="Aberto em" value={formatDateTime(selectedDetail.first_opened_at)} />
+              ) : null}
+              {selectedDetail.expires_at && !selectedDetail.completed_at && (
                 <MetaRow label="Prazo" value={formatDateTime(selectedDetail.expires_at)} />
               )}
             </Card>
@@ -184,7 +185,7 @@ export function PatientFormsTab({ patientId, patientName }: Props) {
   return (
     <View style={{ flex: 1 }}>
       {/* Botão enviar */}
-      <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 }}>
         <Button
           title="Enviar Formulário"
           leftIcon={<Ionicons name="send-outline" size={18} color="#FFF" />}
@@ -255,9 +256,12 @@ function SubmissionCard({
 
       <View style={{ gap: 4 }}>
         <MetaRow label="Enviado" value={formatDateTime(submission.created_at)} />
-        <MetaRow label="Aberto" value={formatDateTime(submission.first_opened_at)} />
-        <MetaRow label="Concluído" value={formatDateTime(submission.completed_at)} />
-        {submission.expires_at && (
+        {submission.status === 'completed' ? (
+          <MetaRow label="Concluído" value={formatDateTime(submission.completed_at)} />
+        ) : submission.first_opened_at ? (
+          <MetaRow label="Aberto" value={formatDateTime(submission.first_opened_at)} />
+        ) : null}
+        {submission.expires_at && !submission.completed_at && (
           <MetaRow label="Prazo" value={formatDateTime(submission.expires_at)} />
         )}
       </View>

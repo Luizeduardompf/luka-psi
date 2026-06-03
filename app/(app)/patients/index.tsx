@@ -39,13 +39,12 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
     >
       <Ionicons
         name={hasSearch ? 'search-outline' : 'people-outline'}
-        size={64}
+        size={56}
         color={theme.colors.text.tertiary}
       />
       <Text
         style={{
-          fontSize: 18,
-          fontWeight: '600',
+          ...theme.typography.h3,
           color: theme.colors.text.secondary,
         }}
       >
@@ -53,7 +52,7 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
       </Text>
       <Text
         style={{
-          fontSize: 14,
+          ...theme.typography.body,
           color: theme.colors.text.tertiary,
           textAlign: 'center',
           paddingHorizontal: 40,
@@ -61,7 +60,7 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
       >
         {hasSearch
           ? 'Tente outro termo de busca.'
-          : 'Toque no botão + para adicionar o primeiro paciente.'}
+          : 'Toque no botao + para adicionar o primeiro paciente.'}
       </Text>
     </View>
   )
@@ -72,7 +71,12 @@ export default function PatientsListScreen() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<PatientStatusFilter>('all')
 
-  const { data: patients, isLoading, refetch, isFetching } = usePatients({
+  const {
+    data: patients,
+    isLoading,
+    refetch,
+    isFetching,
+  } = usePatients({
     status: statusFilter,
     search: search.trim() || undefined,
   })
@@ -85,7 +89,7 @@ export default function PatientsListScreen() {
     (patient: Patient) => {
       Alert.alert(
         'Excluir paciente',
-        `Tem certeza que deseja excluir ${patient.full_name}? Esta ação não pode ser desfeita.`,
+        `Tem certeza que deseja excluir ${patient.full_name}? Esta acao nao pode ser desfeita.`,
         [
           { text: 'Cancelar', style: 'cancel' },
           {
@@ -133,29 +137,41 @@ export default function PatientsListScreen() {
           backgroundColor: theme.colors.background,
         }}
       >
-        <Text
-          style={{
-            fontSize: 28,
-            fontWeight: '800',
-            color: theme.colors.text.primary,
-            letterSpacing: -0.5,
-            marginBottom: theme.spacing.md,
-          }}
-        >
-          Pacientes
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: theme.spacing.md }}>
+          <Text
+            style={{
+              ...theme.typography.h1,
+              color: theme.colors.text.primary,
+            }}
+          >
+            Pacientes
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/patients/new')}
+            activeOpacity={0.8}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: theme.colors.primary,
+              alignItems: 'center',
+              justifyContent: 'center',
+              ...theme.shadow.sm,
+            }}
+          >
+            <Ionicons name="add" size={24} color={theme.colors.text.inverse} />
+          </TouchableOpacity>
+        </View>
 
         {/* Search bar */}
         <View
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: theme.colors.surface,
-            borderRadius: theme.radius.lg,
-            borderWidth: 1.5,
-            borderColor: theme.colors.border,
+            backgroundColor: theme.colors.surfaceSecondary,
+            borderRadius: theme.radius.md,
             paddingHorizontal: theme.spacing.md,
-            height: 48,
+            height: 44,
             gap: 10,
           }}
         >
@@ -171,7 +187,7 @@ export default function PatientsListScreen() {
             onChangeText={setSearch}
             style={{
               flex: 1,
-              fontSize: 15,
+              ...theme.typography.body,
               color: theme.colors.text.primary,
             }}
             returnKeyType="search"
@@ -194,12 +210,12 @@ export default function PatientsListScreen() {
                 onPress={() => setStatusFilter(chip.value)}
                 style={{
                   paddingVertical: 6,
-                  paddingHorizontal: 16,
+                  paddingHorizontal: 14,
                   borderRadius: theme.radius.full,
                   backgroundColor: active
                     ? theme.colors.primary
                     : theme.colors.surface,
-                  borderWidth: 1.5,
+                  borderWidth: 1,
                   borderColor: active
                     ? theme.colors.primary
                     : theme.colors.border,
@@ -207,9 +223,11 @@ export default function PatientsListScreen() {
               >
                 <Text
                   style={{
-                    fontSize: 13,
+                    ...theme.typography.label,
                     fontWeight: active ? '600' : '400',
-                    color: active ? '#FFFFFF' : theme.colors.text.secondary,
+                    color: active
+                      ? theme.colors.text.inverse
+                      : theme.colors.text.secondary,
                   }}
                 >
                   {chip.label}
@@ -225,7 +243,12 @@ export default function PatientsListScreen() {
         <View
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
         >
-          <Text style={{ color: theme.colors.text.tertiary }}>
+          <Text
+            style={{
+              ...theme.typography.body,
+              color: theme.colors.text.tertiary,
+            }}
+          >
             Carregando...
           </Text>
         </View>
@@ -253,25 +276,6 @@ export default function PatientsListScreen() {
         />
       )}
 
-      {/* FAB */}
-      <TouchableOpacity
-        onPress={() => router.push('/(app)/patients/new')}
-        activeOpacity={0.85}
-        style={{
-          position: 'absolute',
-          right: theme.spacing.lg,
-          bottom: insets.bottom + theme.spacing.lg,
-          width: 58,
-          height: 58,
-          borderRadius: 29,
-          backgroundColor: theme.colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          ...theme.shadow.md,
-        }}
-      >
-        <Ionicons name="add" size={30} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   )
 }

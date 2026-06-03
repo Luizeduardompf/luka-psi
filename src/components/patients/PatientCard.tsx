@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge, statusVariantMap, statusLabelMap } from '@/components/ui/Badge'
 import { theme } from '@/constants/theme'
-import { formatPhone, getPatientAvatarUrl } from '@/utils/format'
+import { formatPhone } from '@/utils/format'
 import { Patient } from '@/types/app.types'
 
 interface PatientCardProps {
@@ -31,22 +31,19 @@ export const PatientCard = memo(function PatientCard({
         borderRadius: theme.radius.lg,
         padding: theme.spacing.md,
         marginBottom: theme.spacing.sm,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
         ...theme.shadow.sm,
       }}
     >
       <Avatar
         name={patient.full_name}
-        uri={getPatientAvatarUrl(patient.full_name, patient.gender)}
+        uri={patient.photo_url ?? null}
         size="md"
       />
 
-      <View style={{ flex: 1, marginLeft: theme.spacing.md, gap: 3 }}>
+      <View style={{ flex: 1, marginLeft: theme.spacing.md, gap: 2 }}>
         <Text
           style={{
-            fontSize: 16,
-            fontWeight: '600',
+            ...theme.typography.bodyMedium,
             color: theme.colors.text.primary,
           }}
           numberOfLines={1}
@@ -55,25 +52,33 @@ export const PatientCard = memo(function PatientCard({
         </Text>
 
         {/* Full name if preferred_name is different */}
-        {patient.preferred_name && patient.preferred_name !== patient.full_name && (
-          <Text
-            style={{ fontSize: 12, color: theme.colors.text.tertiary }}
-            numberOfLines={1}
-          >
-            {patient.full_name}
-          </Text>
-        )}
+        {patient.preferred_name &&
+          patient.preferred_name !== patient.full_name && (
+            <Text
+              style={{
+                ...theme.typography.caption,
+                color: theme.colors.text.tertiary,
+              }}
+              numberOfLines={1}
+            >
+              {patient.full_name}
+            </Text>
+          )}
 
         {/* Tutor name (shown below patient name, before phone) */}
         {tutorName ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Ionicons
               name="people-outline"
-              size={12}
+              size={11}
               color={theme.colors.text.tertiary}
             />
             <Text
-              style={{ fontSize: 12, color: theme.colors.text.secondary, fontStyle: 'italic' }}
+              style={{
+                ...theme.typography.caption,
+                color: theme.colors.text.secondary,
+                fontStyle: 'italic',
+              }}
               numberOfLines={1}
             >
               Resp: {tutorName}
@@ -85,24 +90,31 @@ export const PatientCard = memo(function PatientCard({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <Ionicons
               name="call-outline"
-              size={13}
+              size={11}
               color={theme.colors.text.tertiary}
             />
-            <Text style={{ fontSize: 13, color: theme.colors.text.tertiary }}>
+            <Text
+              style={{
+                ...theme.typography.caption,
+                color: theme.colors.text.tertiary,
+              }}
+            >
               {phone}
             </Text>
           </View>
         )}
 
-        <Badge
-          label={statusLabelMap[status] ?? status}
-          variant={statusVariantMap[status] ?? 'default'}
-        />
+        <View style={{ marginTop: 4 }}>
+          <Badge
+            label={statusLabelMap[status] ?? status}
+            variant={statusVariantMap[status] ?? 'default'}
+          />
+        </View>
       </View>
 
       <Ionicons
         name="chevron-forward"
-        size={18}
+        size={16}
         color={theme.colors.text.tertiary}
       />
     </TouchableOpacity>

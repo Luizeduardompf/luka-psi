@@ -239,13 +239,6 @@ export default function FormEditorScreen() {
               </Text>
             )}
           </View>
-          <Button
-            title="Duplicar"
-            variant="outline"
-            size="sm"
-            onPress={handleClone}
-            loading={cloneTemplate.isPending}
-          />
         </View>
       </View>
 

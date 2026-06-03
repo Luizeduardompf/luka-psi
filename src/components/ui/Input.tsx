@@ -42,6 +42,10 @@ export const Input = memo(
         ? theme.colors.primary
         : theme.colors.border
 
+    const backgroundColor = focused
+      ? theme.colors.surface
+      : theme.colors.surfaceSecondary
+
     const passwordIcon: keyof typeof Ionicons.glyphMap = secureText
       ? 'eye-outline'
       : 'eye-off-outline'
@@ -51,10 +55,10 @@ export const Input = memo(
         {label && (
           <Text
             style={{
-              fontSize: 14,
-              fontWeight: '500',
-              color: theme.colors.text.secondary,
+              ...theme.typography.overline,
+              color: focused ? theme.colors.primary : theme.colors.text.secondary,
               marginBottom: 6,
+              textTransform: 'uppercase',
             }}
           >
             {label}
@@ -65,21 +69,19 @@ export const Input = memo(
           style={{
             flexDirection: 'row',
             alignItems: 'center',
-            backgroundColor: theme.colors.surface,
+            backgroundColor,
             borderRadius: theme.radius.md,
             borderWidth: 1.5,
             borderColor,
             paddingHorizontal: theme.spacing.md,
-            minHeight: 52,
+            minHeight: 48,
           }}
         >
           {leftIcon && (
             <Ionicons
               name={leftIcon}
-              size={20}
-              color={
-                focused ? theme.colors.primary : theme.colors.text.tertiary
-              }
+              size={18}
+              color={focused ? theme.colors.primary : theme.colors.text.tertiary}
               style={{ marginRight: 10 }}
             />
           )}
@@ -98,7 +100,7 @@ export const Input = memo(
             placeholderTextColor={theme.colors.text.tertiary}
             style={{
               flex: 1,
-              fontSize: 16,
+              ...theme.typography.body,
               color: theme.colors.text.primary,
               paddingVertical: 12,
             }}
@@ -112,7 +114,7 @@ export const Input = memo(
             >
               <Ionicons
                 name={passwordIcon}
-                size={20}
+                size={18}
                 color={theme.colors.text.tertiary}
               />
             </TouchableOpacity>
@@ -125,7 +127,7 @@ export const Input = memo(
             >
               <Ionicons
                 name={rightIcon}
-                size={20}
+                size={18}
                 color={theme.colors.text.tertiary}
               />
             </TouchableOpacity>
@@ -135,7 +137,7 @@ export const Input = memo(
         {error ? (
           <Text
             style={{
-              fontSize: 12,
+              ...theme.typography.caption,
               color: theme.colors.error,
               marginTop: 4,
             }}
@@ -145,7 +147,7 @@ export const Input = memo(
         ) : hint ? (
           <Text
             style={{
-              fontSize: 12,
+              ...theme.typography.caption,
               color: theme.colors.text.tertiary,
               marginTop: 4,
             }}

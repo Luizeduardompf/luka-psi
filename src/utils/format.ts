@@ -21,15 +21,44 @@ export function formatCpf(cpf: string): string {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
 }
 
+/** Formata documento conforme tipo */
+export function formatDocument(number: string | null | undefined, type: string | null | undefined): string {
+  if (!number) return '—'
+  if (type === 'cpf') return formatCpf(number)
+  if (type === 'nif') {
+    const d = number.replace(/\D/g, '')
+    if (d.length === 9) return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`
+  }
+  return number
+}
+
+/** Máscara de documento: aplica formato conforme tipo selecionado */
+export function maskDocument(value: string, type: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (type === 'cpf') {
+    const d = digits.slice(0, 11)
+    if (d.length <= 3) return d
+    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
+    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+  }
+  if (type === 'nif') {
+    const d = digits.slice(0, 9)
+    if (d.length <= 3) return d
+    if (d.length <= 6) return `${d.slice(0, 3)} ${d.slice(3)}`
+    return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`
+  }
+  return digits
+}
+
+// Sem máscara — retorna o valor como está (campo livre: dígitos, espaços e pontos)
 export function formatPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, '')
-  if (digits.length === 11) {
-    return digits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
-  }
-  if (digits.length === 10) {
-    return digits.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
-  }
   return phone
+}
+
+// Sanitiza input de telefone: só permite dígitos, espaços e pontos
+export function sanitizePhone(value: string): string {
+  return value.replace(/[^\d\s.+]/g, '')
 }
 
 export function getInitials(name: string): string {
@@ -48,14 +77,9 @@ export function maskCpf(value: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
 }
 
+// Sem máscara — só filtra caracteres inválidos
 export function maskPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 2) return digits.length ? `(${digits}` : ''
-  if (digits.length <= 6)
-    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`
-  if (digits.length <= 10)
-    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
-  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
+  return sanitizePhone(value)
 }
 
 export function maskNif(value: string): string {
