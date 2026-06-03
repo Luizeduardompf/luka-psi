@@ -206,14 +206,25 @@ export const patientSchema = z
   })
   .refine(
     (data) => {
+      // CPF e NIF são obrigatórios — apenas 'other' pode ficar em branco
+      if (data.document_type !== 'other') {
+        const num = data.document_number?.replace(/\D/g, '') ?? ''
+        if (!num) return false
+      }
+      return true
+    },
+    { message: 'Número do documento é obrigatório para CPF e NIF', path: ['document_number'] },
+  )
+  .refine(
+    (data) => {
       const num = data.document_number?.replace(/\D/g, '') ?? ''
-      if (!num) return true // documento opcional
+      if (!num) return true
       if (data.document_type === 'cpf') return isValidCpf(num)
       if (data.document_type === 'nif') return isValidNif(num)
-      return true // 'other' aceita qualquer valor
+      return true
     },
     (data) => ({
-      message: data.document_type === 'cpf' ? 'CPF inválido' : 'NIF inválido',
+      message: data.document_type === 'cpf' ? 'CPF inválido' : 'NIF inválido (deve ter 9 dígitos)',
       path: ['document_number'],
     }),
   )
