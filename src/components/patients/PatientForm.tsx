@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { theme } from '@/constants/theme'
 import { patientSchema, PatientSchemaData } from '@/utils/validators'
-import { maskCpf, maskNif, maskPhone } from '@/utils/format'
+import { maskPhone, maskDocument } from '@/utils/format'
 import {
   STATUS_OPTIONS,
   EDUCATION_OPTIONS,
@@ -288,9 +288,12 @@ export const PatientForm = memo(function PatientForm({
       phone: initialData?.phone ?? '',
       phone_ddi: (initialData as any)?.phone_ddi ?? '',
 
-      // Documents
-      cpf: initialData?.cpf ?? '',
-      nif: initialData?.nif ?? '',
+      // Document
+      document_type: (initialData?.document_type as 'cpf' | 'nif' | 'other') ?? 'cpf',
+      document_number: initialData?.document_number
+        ?? initialData?.cpf  // fallback dados antigos
+        ?? initialData?.nif
+        ?? '',
 
       // Address
       address: initialData?.address ?? '',
@@ -341,8 +344,6 @@ export const PatientForm = memo(function PatientForm({
     useFieldArray({ control, name: 'additional_contacts' })
 
   const dobValue = watch('date_of_birth')
-  const cpfValue = watch('cpf')
-  const nifValue = watch('nif')
   const countryIdValue = watch('country_id')
 
   // Auto-fill DDI when country changes
@@ -390,8 +391,6 @@ export const PatientForm = memo(function PatientForm({
     ...(plans ?? []).map((p) => ({ label: p.name, value: p.id })),
   ]
 
-  const hasCpf = cpfValue && cpfValue.replace(/\D/g, '').length > 0
-  const hasNif = nifValue && nifValue.replace(/\D/g, '').length > 0
 
   return (
     <View style={{ flex: 1 }}>
@@ -400,29 +399,6 @@ export const PatientForm = memo(function PatientForm({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── LOCAL DE PRÁTICA ── */}
-        <SectionHeader title="Local de prática" />
-        <Card>
-          <Controller
-            control={control}
-            name="practice_location_id"
-            render={({ field: { onChange, value } }) => (
-              <SelectDropdown
-                label="Local de prática *"
-                options={practiceLocations.map((l) => ({ label: l.name, value: l.id }))}
-                value={value ?? ''}
-                onChange={onChange}
-                placeholder="Selecionar local..."
-              />
-            )}
-          />
-          {errors.practice_location_id && (
-            <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8 }}>
-              {errors.practice_location_id.message}
-            </Text>
-          )}
-        </Card>
-
         {/* ── IDENTIFICAÇÃO ── */}
         <SectionHeader title="Identificação" />
         <Card>
@@ -638,60 +614,44 @@ export const PatientForm = memo(function PatientForm({
           </View>
         </Card>
 
-        {/* ── DOCUMENTOS ── */}
-        <SectionHeader title="Documentos" />
+        {/* ── DOCUMENTO ── */}
+        <SectionHeader title="Documento de identificação" />
         <Card>
-          {!hasCpf && !hasNif && (
-            <View
-              style={{
-                backgroundColor: '#FEF3C7',
-                borderRadius: theme.radius.md,
-                padding: theme.spacing.sm,
-                marginBottom: theme.spacing.md,
-                flexDirection: 'row',
-                gap: 8,
-                alignItems: 'flex-start',
-              }}
-            >
-              <Ionicons name="information-circle-outline" size={18} color="#D97706" />
-              <Text style={{ fontSize: 13, color: '#92400E', flex: 1, lineHeight: 18 }}>
-                Informe CPF ou NIF para identificação em faturação.
-              </Text>
-            </View>
-          )}
-
           <Controller
             control={control}
-            name="cpf"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="CPF (Brasil)"
-                placeholder="000.000.000-00"
-                leftIcon="card-outline"
-                keyboardType="numeric"
-                onChangeText={(v) => onChange(maskCpf(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.cpf?.message}
+            name="document_type"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="Tipo de documento"
+                options={[
+                  { label: 'CPF (Brasil)', value: 'cpf' },
+                  { label: 'NIF (Portugal)', value: 'nif' },
+                  { label: 'Outro', value: 'other' },
+                ]}
+                value={value ?? 'cpf'}
+                onChange={onChange}
               />
             )}
           />
-
           <Controller
             control={control}
-            name="nif"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="NIF (Portugal)"
-                placeholder="000 000 000"
-                leftIcon="card-outline"
-                keyboardType="numeric"
-                onChangeText={(v) => onChange(maskNif(v))}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.nif?.message}
-              />
-            )}
+            name="document_number"
+            render={({ field: { onChange, onBlur, value }, fieldState }) => {
+              const type = watch('document_type')
+              const placeholder = type === 'cpf' ? '000.000.000-00' : type === 'nif' ? '000 000 000' : 'Número do documento'
+              return (
+                <Input
+                  label="Número do documento"
+                  placeholder={placeholder}
+                  leftIcon="card-outline"
+                  keyboardType="numeric"
+                  onChangeText={(v) => onChange(maskDocument(v, type))}
+                  onBlur={onBlur}
+                  value={value ?? ''}
+                  error={fieldState.error?.message ?? errors.document_number?.message}
+                />
+              )
+            }}
           />
         </Card>
 
@@ -1123,6 +1083,29 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+        </Card>
+
+        {/* ── LOCAL DE PRÁTICA ── */}
+        <SectionHeader title="Local de prática" />
+        <Card>
+          <Controller
+            control={control}
+            name="practice_location_id"
+            render={({ field: { onChange, value } }) => (
+              <SelectDropdown
+                label="Local de prática *"
+                options={practiceLocations.map((l) => ({ label: l.name, value: l.id }))}
+                value={value ?? ''}
+                onChange={onChange}
+                placeholder="Selecionar local..."
+              />
+            )}
+          />
+          {errors.practice_location_id && (
+            <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8 }}>
+              {errors.practice_location_id.message}
+            </Text>
+          )}
         </Card>
 
         {/* ── CONSENTIMENTOS ── */}

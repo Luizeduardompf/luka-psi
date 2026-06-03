@@ -113,6 +113,8 @@ export type Database = {
           phone: string | null
           cpf: string | null
           nif: string | null
+          document_number: string | null
+          document_type: string | null
           date_of_birth: string | null
           gender: string | null
           gender_id: string | null
@@ -159,6 +161,8 @@ export type Database = {
           phone?: string | null
           cpf?: string | null
           nif?: string | null
+          document_number?: string | null
+          document_type?: string | null
           date_of_birth?: string | null
           gender?: string | null
           gender_id?: string | null
@@ -205,6 +209,8 @@ export type Database = {
           phone?: string | null
           cpf?: string | null
           nif?: string | null
+          document_number?: string | null
+          document_type?: string | null
           date_of_birth?: string | null
           gender?: string | null
           gender_id?: string | null

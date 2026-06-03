@@ -142,21 +142,16 @@ export const patientSchema = z
     phone: z.string().optional().or(z.literal('')),
     phone_ddi: z.string().optional().or(z.literal('')),
 
-    // Documents — at least one required
-    cpf: z
+    // Documento de identificação
+    document_type: z.enum(['cpf', 'nif', 'other']).default('cpf'),
+    document_number: z
       .string()
-      .refine((v) => !v || v.replace(/\D/g, '').length === 0 || isValidCpf(v), {
-        message: 'CPF inválido',
-      })
       .optional()
-      .or(z.literal('')),
-    nif: z
-      .string()
-      .refine((v) => !v || v.replace(/\D/g, '').length === 0 || isValidNif(v), {
-        message: 'NIF inválido (Portugal)',
-      })
-      .optional()
-      .or(z.literal('')),
+      .or(z.literal(''))
+      .superRefine((v, ctx) => {
+        if (!v || v.replace(/\D/g, '').length === 0) return
+        // A validação de formato depende do document_type — feita com refine após o objeto
+      }),
 
     // Address
     address: z.string().optional().or(z.literal('')),
@@ -211,14 +206,16 @@ export const patientSchema = z
   })
   .refine(
     (data) => {
-      const hasCpf =
-        data.cpf && data.cpf.replace(/\D/g, '').length > 0
-      const hasNif =
-        data.nif && data.nif.replace(/\D/g, '').length > 0
-      // At least one document OR neither (optional for non-billing patients)
-      return true // optional — warn in UI if both empty
+      const num = data.document_number?.replace(/\D/g, '') ?? ''
+      if (!num) return true // documento opcional
+      if (data.document_type === 'cpf') return isValidCpf(num)
+      if (data.document_type === 'nif') return isValidNif(num)
+      return true // 'other' aceita qualquer valor
     },
-    { message: 'Informe CPF ou NIF para fins de faturação', path: ['cpf'] },
+    (data) => ({
+      message: data.document_type === 'cpf' ? 'CPF inválido' : 'NIF inválido',
+      path: ['document_number'],
+    }),
   )
 
 export type LoginFormData = z.infer<typeof loginSchema>

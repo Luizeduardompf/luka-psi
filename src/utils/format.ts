@@ -21,6 +21,36 @@ export function formatCpf(cpf: string): string {
   return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
 }
 
+/** Formata documento conforme tipo */
+export function formatDocument(number: string | null | undefined, type: string | null | undefined): string {
+  if (!number) return '—'
+  if (type === 'cpf') return formatCpf(number)
+  if (type === 'nif') {
+    const d = number.replace(/\D/g, '')
+    if (d.length === 9) return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`
+  }
+  return number
+}
+
+/** Máscara de documento: aplica formato conforme tipo selecionado */
+export function maskDocument(value: string, type: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (type === 'cpf') {
+    const d = digits.slice(0, 11)
+    if (d.length <= 3) return d
+    if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
+    if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+  }
+  if (type === 'nif') {
+    const d = digits.slice(0, 9)
+    if (d.length <= 3) return d
+    if (d.length <= 6) return `${d.slice(0, 3)} ${d.slice(3)}`
+    return `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`
+  }
+  return digits
+}
+
 // Sem máscara — retorna o valor como está (campo livre: dígitos, espaços e pontos)
 export function formatPhone(phone: string): string {
   return phone

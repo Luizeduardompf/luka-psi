@@ -109,7 +109,7 @@ export function PatientFormsTab({ patientId, patientName }: Props) {
               ) : selectedDetail.first_opened_at ? (
                 <MetaRow label="Aberto em" value={formatDateTime(selectedDetail.first_opened_at)} />
               ) : null}
-              {selectedDetail.expires_at && (
+              {selectedDetail.expires_at && !selectedDetail.completed_at && (
                 <MetaRow label="Prazo" value={formatDateTime(selectedDetail.expires_at)} />
               )}
             </Card>
@@ -261,7 +261,7 @@ function SubmissionCard({
         ) : submission.first_opened_at ? (
           <MetaRow label="Aberto" value={formatDateTime(submission.first_opened_at)} />
         ) : null}
-        {submission.expires_at && (
+        {submission.expires_at && !submission.completed_at && (
           <MetaRow label="Prazo" value={formatDateTime(submission.expires_at)} />
         )}
       </View>

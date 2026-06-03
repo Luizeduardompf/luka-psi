@@ -19,7 +19,7 @@ import { PatientFormsTab } from '@/components/forms/PatientFormsTab'
 import { theme } from '@/constants/theme'
 import { usePatient, useUpdatePatient, useDeletePatient } from '@/hooks/usePatients'
 import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
-import { formatDate, formatPhone, formatCpf, getPatientAvatarUrl } from '@/utils/format'
+import { formatDate, formatPhone, formatCpf, formatDocument, getPatientAvatarUrl } from '@/utils/format'
 
 function calcAge(dob: string | null | undefined): string | null {
   if (!dob) return null
@@ -355,8 +355,11 @@ export default function PatientDetailScreen() {
             preferred_name: data.preferred_name || null,
             email: data.email || null,
             phone: data.phone || null,
-            cpf: data.cpf || null,
-            nif: data.nif || null,
+            document_number: data.document_number || null,
+            document_type: data.document_number ? (data.document_type || 'cpf') : null,
+            // manter retrocompatibilidade
+            cpf: data.document_type === 'cpf' ? (data.document_number || null) : null,
+            nif: data.document_type === 'nif' ? (data.document_number || null) : null,
             date_of_birth: data.date_of_birth || null,
             gender: data.gender || null,
             gender_id: data.gender_id || null,
@@ -698,8 +701,17 @@ export default function PatientDetailScreen() {
           <InfoRow icon="briefcase-outline" label="Profissão" value={patient.profession ?? null} />
           <InfoRow icon="school-outline" label="Escolaridade" value={patient.education ?? null} />
           <Divider />
-          <InfoRow icon="card-outline" label="CPF" value={patient.cpf ? formatCpf(patient.cpf) : null} />
-          <InfoRow icon="card-outline" label="NIF" value={patient.nif ?? null} />
+          <InfoRow
+            icon="card-outline"
+            label={patient.document_type === 'nif' ? 'NIF' : patient.document_type === 'cpf' ? 'CPF' : patient.document_type ? 'Documento' : 'CPF/NIF'}
+            value={
+              patient.document_number
+                ? formatDocument(patient.document_number, patient.document_type)
+                : patient.cpf ? formatCpf(patient.cpf)   // fallback dados antigos
+                : patient.nif ? patient.nif
+                : null
+            }
+          />
           <InfoRow icon="medkit-outline" label="N.º Utente SNS" value={patient.sns_user_number ?? null} />
           <InfoRow icon="document-text-outline" label="Protocolo local" value={patient.local_protocol ?? null} />
           <Divider />
