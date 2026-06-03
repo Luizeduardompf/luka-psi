@@ -1,21 +1,24 @@
 import { Tabs, Redirect } from 'expo-router'
+import { StackActions } from '@react-navigation/native'
 import { View, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { StackActions } from '@react-navigation/native'
 import { useSessionStore } from '@/stores/session.store'
 import { theme } from '@/constants/theme'
 
 /**
- * Cria um listener que faz pop-to-top na stack interna do tab ao ser pressionado.
  * Comportamento standard (Instagram, Gmail, etc.):
- * - Tap num tab → vai sempre para a raiz desse tab
+ * - Tap no tab já focado → popToTop (volta para a raiz do stack)
+ * - Tap num tab diferente → restaura o último estado do stack (tela onde estava)
+ * O estado local da tela index (ex: search filter) é preservado pois ela nunca é desmontada.
  */
-function makeTabResetListener(tabName: string) {
+function makeTabResetListener(_tabName: string) {
   return ({ navigation, route }: { navigation: any; route: any }) => ({
-    tabPress: () => {
+    tabPress: (e: any) => {
       const state = navigation.getState()
+      const isFocused = state?.routes?.[state.index]?.name === route.name
       const tabRoute = state?.routes?.find((r: any) => r.name === route.name)
-      if (tabRoute?.state && (tabRoute.state.index ?? 0) > 0) {
+      if (isFocused && tabRoute?.state && (tabRoute.state.index ?? 0) > 0) {
+        e.preventDefault()
         navigation.dispatch({
           ...StackActions.popToTop(),
           target: tabRoute.state.key,

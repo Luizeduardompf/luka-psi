@@ -19,7 +19,7 @@ import { PatientFormsTab } from '@/components/forms/PatientFormsTab'
 import { theme } from '@/constants/theme'
 import { usePatient, useUpdatePatient, useDeletePatient } from '@/hooks/usePatients'
 import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
-import { formatDate, formatPhone, formatCpf, formatDocument, getPatientAvatarUrl } from '@/utils/format'
+import { formatDate, formatPhone, formatCpf, formatDocument } from '@/utils/format'
 
 function calcAge(dob: string | null | undefined): string | null {
   if (!dob) return null
@@ -34,6 +34,7 @@ import { PatientSchemaData } from '@/utils/validators'
 import { PatientStatus } from '@/types/app.types'
 import { useGenders } from '@/hooks/useGenders'
 import { Toast, useToast } from '@/components/ui/Toast'
+import { PhotoViewer } from '@/components/ui/PhotoViewer'
 
 type ActiveTab = 'info' | 'sessions' | 'forms' | 'attachments' | 'financial'
 
@@ -301,6 +302,7 @@ export default function PatientDetailScreen() {
   const { id, tab: initialTab } = useLocalSearchParams<{ id: string; tab?: string }>()
   const insets = useSafeAreaInsets()
   const [editVisible, setEditVisible] = useState(false)
+  const [photoViewerVisible, setPhotoViewerVisible] = useState(false)
   const validTabs: ActiveTab[] = ['info', 'sessions', 'forms', 'attachments', 'financial']
   const [activeTab, setActiveTab] = useState<ActiveTab>('info')
 
@@ -545,11 +547,16 @@ export default function PatientDetailScreen() {
         {/* Profile header */}
         <Card elevated>
           <View style={{ alignItems: 'center', gap: 12 }}>
-            <Avatar
-              name={patient.full_name}
-              uri={getPatientAvatarUrl(patient.full_name, patient.gender)}
-              size="xl"
-            />
+            <TouchableOpacity
+              onPress={() => { if (patient.photo_url) setPhotoViewerVisible(true) }}
+              activeOpacity={patient.photo_url ? 0.8 : 1}
+            >
+              <Avatar
+                name={patient.full_name}
+                uri={patient.photo_url ?? null}
+                size="xl"
+              />
+            </TouchableOpacity>
             <View style={{ alignItems: 'center', gap: 4 }}>
               {patient.preferred_name && patient.preferred_name !== patient.full_name && (
                 <Text
@@ -784,6 +791,16 @@ export default function PatientDetailScreen() {
 
       )}
 
+      {/* Photo viewer */}
+      {patient.photo_url && (
+        <PhotoViewer
+          visible={photoViewerVisible}
+          uri={patient.photo_url}
+          patientName={patient.preferred_name ?? patient.full_name}
+          onClose={() => setPhotoViewerVisible(false)}
+        />
+      )}
+
       {/* Edit modal */}
       <Modal
         visible={editVisible}
@@ -828,6 +845,7 @@ export default function PatientDetailScreen() {
           </View>
 
           <PatientForm
+            patientId={patient.id}
             initialData={patient}
             onSubmit={handleUpdate}
             isLoading={updateMutation.isPending}

@@ -149,6 +149,7 @@ export type Database = {
           consent_informed: boolean
           consent_minors: boolean
           notes: string | null
+          photo_url: string | null
           created_at: string
           updated_at: string
         }
@@ -197,6 +198,7 @@ export type Database = {
           consent_informed?: boolean
           consent_minors?: boolean
           notes?: string | null
+          photo_url?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -245,6 +247,7 @@ export type Database = {
           consent_informed?: boolean
           consent_minors?: boolean
           notes?: string | null
+          photo_url?: string | null
           created_at?: string
           updated_at?: string
         }

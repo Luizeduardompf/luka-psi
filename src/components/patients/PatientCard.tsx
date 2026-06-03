@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge, statusVariantMap, statusLabelMap } from '@/components/ui/Badge'
 import { theme } from '@/constants/theme'
-import { formatPhone, getPatientAvatarUrl } from '@/utils/format'
+import { formatPhone } from '@/utils/format'
 import { Patient } from '@/types/app.types'
 
 interface PatientCardProps {
@@ -36,7 +36,7 @@ export const PatientCard = memo(function PatientCard({
     >
       <Avatar
         name={patient.full_name}
-        uri={getPatientAvatarUrl(patient.full_name, patient.gender)}
+        uri={patient.photo_url ?? null}
         size="md"
       />
 

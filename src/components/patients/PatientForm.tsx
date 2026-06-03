@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useState, useEffect } from 'react'
+import React, { memo, useCallback, useState, useEffect, useRef } from 'react'
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   Platform,
   Switch,
   Alert,
+  findNodeHandle,
+  UIManager,
 } from 'react-native'
-import { useForm, Controller, useFieldArray } from 'react-hook-form'
+import { useForm, Controller, useFieldArray, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import DateTimePicker from '@react-native-community/datetimepicker'
 import { format, parseISO, isValid } from 'date-fns'
@@ -26,8 +28,10 @@ import {
 } from '@/types/app.types'
 import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
 import { useGenders } from '@/hooks/useGenders'
+import { PatientPhotoEditor } from './PatientPhotoEditor'
 
 interface PatientFormProps {
+  patientId?: string          // obrigatório para edição de foto; ausente em novo paciente
   initialData?: Partial<Patient>
   onSubmit: (data: PatientSchemaData) => Promise<void>
   isLoading?: boolean
@@ -246,6 +250,7 @@ function ConsentRow({
 }
 
 export const PatientForm = memo(function PatientForm({
+  patientId,
   initialData,
   onSubmit,
   isLoading = false,
@@ -262,6 +267,38 @@ export const PatientForm = memo(function PatientForm({
   const { data: countries = [] } = useCountries()
   const { data: practiceLocations = [] } = usePracticeLocations()
   const { data: gendersData = [] } = useGenders()
+
+  const scrollViewRef = useRef<ScrollView>(null)
+  const fieldRefs = useRef<Partial<Record<string, View | null>>>({})
+
+  // Ordem visual dos campos que podem ter erros — usada para scroll automático
+  const FIELD_ORDER: (keyof PatientSchemaData)[] = [
+    'full_name',
+    'email',
+    'document_number',
+    'country_id',
+    'practice_location_id',
+    'spouse_email',
+    'tutor_email',
+  ]
+
+  const scrollToFirstError = useCallback((errs: FieldErrors<PatientSchemaData>) => {
+    const firstField = FIELD_ORDER.find((f) => !!errs[f])
+    if (!firstField) return
+    const fieldRef = fieldRefs.current[firstField]
+    if (!fieldRef || !scrollViewRef.current) return
+    const fieldNode = findNodeHandle(fieldRef)
+    const scrollNode = findNodeHandle(scrollViewRef.current)
+    if (!fieldNode || !scrollNode) return
+    UIManager.measureLayout(
+      fieldNode,
+      scrollNode,
+      () => {},
+      (_x, y) => {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 16), animated: true })
+      },
+    )
+  }, [])
 
   const {
     control,
@@ -395,29 +432,41 @@ export const PatientForm = memo(function PatientForm({
   return (
     <View style={{ flex: 1 }}>
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={{ padding: theme.spacing.md, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* ── FOTO ── */}
+        {patientId && (
+          <PatientPhotoEditor
+            patientId={patientId}
+            patientName={initialData?.full_name ?? ''}
+            photoUrl={initialData?.photo_url}
+          />
+        )}
+
         {/* ── IDENTIFICAÇÃO ── */}
         <SectionHeader title="Identificação" />
         <Card>
-          <Controller
-            control={control}
-            name="full_name"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Nome completo *"
-                placeholder="Nome do paciente"
-                leftIcon="person-outline"
-                autoCapitalize="words"
-                onChangeText={onChange}
-                onBlur={onBlur}
-                value={value}
-                error={errors.full_name?.message}
-              />
-            )}
-          />
+          <View ref={(r) => { fieldRefs.current.full_name = r }}>
+            <Controller
+              control={control}
+              name="full_name"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="Nome completo *"
+                  placeholder="Nome do paciente"
+                  leftIcon="person-outline"
+                  autoCapitalize="words"
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  value={value}
+                  error={errors.full_name?.message}
+                />
+              )}
+            />
+          </View>
 
           <Controller
             control={control}
@@ -557,23 +606,25 @@ export const PatientForm = memo(function PatientForm({
         {/* ── CONTACTO ── */}
         <SectionHeader title="Contacto" />
         <Card>
-          <Controller
-            control={control}
-            name="email"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="E-mail"
-                placeholder="email@exemplo.com"
-                leftIcon="mail-outline"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                onChangeText={onChange}
-                onBlur={onBlur}
-                value={value ?? ''}
-                error={errors.email?.message}
-              />
-            )}
-          />
+          <View ref={(r) => { fieldRefs.current.email = r }}>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <Input
+                  label="E-mail"
+                  placeholder="email@exemplo.com"
+                  leftIcon="mail-outline"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  value={value ?? ''}
+                  error={errors.email?.message}
+                />
+              )}
+            />
+          </View>
 
           {/* Phone + DDI */}
           <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -633,26 +684,28 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
-          <Controller
-            control={control}
-            name="document_number"
-            render={({ field: { onChange, onBlur, value }, fieldState }) => {
-              const type = watch('document_type')
-              const placeholder = type === 'cpf' ? '000.000.000-00' : type === 'nif' ? '000 000 000' : 'Número do documento'
-              return (
-                <Input
-                  label="Número do documento"
-                  placeholder={placeholder}
-                  leftIcon="card-outline"
-                  keyboardType="numeric"
-                  onChangeText={(v) => onChange(maskDocument(v, type))}
-                  onBlur={onBlur}
-                  value={value ?? ''}
-                  error={fieldState.error?.message ?? errors.document_number?.message}
-                />
-              )
-            }}
-          />
+          <View ref={(r) => { fieldRefs.current.document_number = r }}>
+            <Controller
+              control={control}
+              name="document_number"
+              render={({ field: { onChange, onBlur, value }, fieldState }) => {
+                const type = watch('document_type')
+                const placeholder = type === 'cpf' ? '000.000.000-00' : type === 'nif' ? '000 000 000' : 'Número do documento'
+                return (
+                  <Input
+                    label="Número do documento"
+                    placeholder={placeholder}
+                    leftIcon="card-outline"
+                    keyboardType="numeric"
+                    onChangeText={(v) => onChange(maskDocument(v, type))}
+                    onBlur={onBlur}
+                    value={value ?? ''}
+                    error={fieldState.error?.message ?? errors.document_number?.message}
+                  />
+                )
+              }}
+            />
+          </View>
         </Card>
 
         {/* ── MORADA ── */}
@@ -729,24 +782,26 @@ export const PatientForm = memo(function PatientForm({
             </View>
           </View>
 
-          <Controller
-            control={control}
-            name="country_id"
-            render={({ field: { onChange, value } }) => (
-              <SelectDropdown
-                label="País *"
-                options={countries.map((c) => ({ label: c.name, value: c.id }))}
-                value={value ?? ''}
-                onChange={onChange}
-                placeholder="Selecionar país..."
-              />
+          <View ref={(r) => { fieldRefs.current.country_id = r }}>
+            <Controller
+              control={control}
+              name="country_id"
+              render={({ field: { onChange, value } }) => (
+                <SelectDropdown
+                  label="País *"
+                  options={countries.map((c) => ({ label: c.name, value: c.id }))}
+                  value={value ?? ''}
+                  onChange={onChange}
+                  placeholder="Selecionar país..."
+                />
+              )}
+            />
+            {errors.country_id && (
+              <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8, marginBottom: 8 }}>
+                {errors.country_id.message}
+              </Text>
             )}
-          />
-          {errors.country_id && (
-            <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8, marginBottom: 8 }}>
-              {errors.country_id.message}
-            </Text>
-          )}
+          </View>
         </Card>
 
         {/* ── CÔNJUGE / COMPANHEIR@ ── */}
@@ -1088,24 +1143,26 @@ export const PatientForm = memo(function PatientForm({
         {/* ── LOCAL DE PRÁTICA ── */}
         <SectionHeader title="Local de prática" />
         <Card>
-          <Controller
-            control={control}
-            name="practice_location_id"
-            render={({ field: { onChange, value } }) => (
-              <SelectDropdown
-                label="Local de prática *"
-                options={practiceLocations.map((l) => ({ label: l.name, value: l.id }))}
-                value={value ?? ''}
-                onChange={onChange}
-                placeholder="Selecionar local..."
-              />
+          <View ref={(r) => { fieldRefs.current.practice_location_id = r }}>
+            <Controller
+              control={control}
+              name="practice_location_id"
+              render={({ field: { onChange, value } }) => (
+                <SelectDropdown
+                  label="Local de prática *"
+                  options={practiceLocations.map((l) => ({ label: l.name, value: l.id }))}
+                  value={value ?? ''}
+                  onChange={onChange}
+                  placeholder="Selecionar local..."
+                />
+              )}
+            />
+            {errors.practice_location_id && (
+              <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8 }}>
+                {errors.practice_location_id.message}
+              </Text>
             )}
-          />
-          {errors.practice_location_id && (
-            <Text style={{ color: theme.colors.error, fontSize: 12, marginTop: -8 }}>
-              {errors.practice_location_id.message}
-            </Text>
-          )}
+          </View>
         </Card>
 
         {/* ── CONSENTIMENTOS ── */}
@@ -1184,7 +1241,7 @@ export const PatientForm = memo(function PatientForm({
       >
         <Button
           title={submitLabel}
-          onPress={handleSubmit(onSubmit)}
+          onPress={handleSubmit(onSubmit, scrollToFirstError)}
           loading={isLoading}
           fullWidth
           size="lg"
