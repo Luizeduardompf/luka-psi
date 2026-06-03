@@ -55,6 +55,7 @@ export type Database = {
           nif: string | null
           birth_date: string | null
           onboarding_completed: boolean
+          patient_terminology: string | null
           created_at: string
           updated_at: string
         }
@@ -77,6 +78,7 @@ export type Database = {
           nif?: string | null
           birth_date?: string | null
           onboarding_completed?: boolean
+          patient_terminology?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -95,6 +97,7 @@ export type Database = {
           address?: string | null
           postal_code?: string | null
           city?: string | null
+          patient_terminology?: string | null
           country?: string | null
           nif?: string | null
           birth_date?: string | null

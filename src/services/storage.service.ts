@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import { formatSupabaseError } from '@/utils/errors'
 import { ServiceResult } from '@/types/app.types'
-import * as FileSystem from 'expo-file-system'
+import * as FileSystem from 'expo-file-system/legacy'
 
 /** Converte base64 string para ArrayBuffer sem dependências externas */
 function base64ToArrayBuffer(base64: string): ArrayBuffer {

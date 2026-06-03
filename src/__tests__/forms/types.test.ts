@@ -76,8 +76,8 @@ describe('DEFAULT_SEND_MESSAGE', () => {
   it('contém todos os placeholders esperados', () => {
     expect(DEFAULT_SEND_MESSAGE).toContain('<<nome_paciente>>')
     expect(DEFAULT_SEND_MESSAGE).toContain('<<link>>')
-    expect(DEFAULT_SEND_MESSAGE).toContain('<<senha>>')
     expect(DEFAULT_SEND_MESSAGE).toContain('<<nome_formulario>>')
+    expect(DEFAULT_SEND_MESSAGE).toContain('<<nome_psicologo>>')
   })
 
   it('é uma string não vazia', () => {

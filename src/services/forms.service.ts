@@ -1018,7 +1018,8 @@ export const formsService = {
     options: Array<{ id: string; question_id: string; label: string; value: string; sort_order: number }>
   }>> {
     try {
-      const { data, error } = await supabasePublic.rpc('get_form_template_preview', {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabasePublic as any).rpc('get_form_template_preview', {
         p_template_id: templateId,
       })
       if (error) return { data: null, error: formatSupabaseError(error) }

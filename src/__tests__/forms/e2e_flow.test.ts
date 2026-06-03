@@ -40,7 +40,11 @@ const chainable: Record<string, jest.Mock> & { then?: Function } = {
   select: jest.fn(), eq: jest.fn(), single: jest.fn(), insert: jest.fn(),
   update: jest.fn(), delete: jest.fn(), order: jest.fn(), in: jest.fn(),
   upsert: jest.fn(), limit: jest.fn(), neq: jest.fn(), is: jest.fn(),
-  filter: jest.fn(), or: jest.fn(),
+  filter: jest.fn(), or: jest.fn(), ilike: jest.fn(), gte: jest.fn(),
+  lte: jest.fn(), lt: jest.fn(), gt: jest.fn(), not: jest.fn(),
+  contains: jest.fn(), range: jest.fn(), maybeSingle: jest.fn(),
+  throwOnError: jest.fn(), returns: jest.fn(), csv: jest.fn(),
+  overrideTypes: jest.fn(),
 }
 Object.keys(chainable).forEach((k) => chainable[k].mockReturnValue(chainable))
 chainable.then = jest.fn((resolve: (v: unknown) => void) => resolve(dequeue()))
@@ -58,6 +62,10 @@ jest.mock('@/services/supabase', () => ({
     from: jest.fn().mockReturnValue(chainable),
     rpc: mockRpc,
     storage: mockStorage,
+  },
+  supabasePublic: {
+    from: jest.fn().mockReturnValue(chainable),
+    rpc: mockRpc,
   },
 }))
 
@@ -193,6 +201,7 @@ describe('E2E — Fluxo completo de formulários', () => {
   // ── 1. Criar template ──────────────────────────────────────────────────────
   describe('1. Criação de template pelo psicólogo', () => {
     it('cria template com título e descrição', async () => {
+      enqueue({ data: null, error: null }) // duplicate check: not found
       enqueue({ data: baseTemplate, error: null })
       const result = await formsService.createTemplate(PSYCH_ID, {
         title: 'Anamnese Adulto',
@@ -252,6 +261,7 @@ describe('E2E — Fluxo completo de formulários', () => {
     })
 
     it('falha ao criar template sem título', async () => {
+      enqueue({ data: null, error: null }) // duplicate check: not found
       enqueue({ data: null, error: { message: 'title is required', code: '23502' } })
       const result = await formsService.createTemplate(PSYCH_ID, { title: '' })
       expect(result.error).not.toBeNull()

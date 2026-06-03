@@ -59,7 +59,7 @@ export interface FormQuestionOption {
   question_id: string
   label: string
   sort_order: number
-  created_at: string
+  created_at?: string
 }
 
 export interface FormSubmission {

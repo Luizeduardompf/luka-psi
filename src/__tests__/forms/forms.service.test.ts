@@ -41,6 +41,19 @@ const chainable: Record<string, jest.Mock> & { then?: Function } = {
   neq: jest.fn(),
   is: jest.fn(),
   filter: jest.fn(),
+  ilike: jest.fn(),
+  gte: jest.fn(),
+  lte: jest.fn(),
+  lt: jest.fn(),
+  gt: jest.fn(),
+  not: jest.fn(),
+  contains: jest.fn(),
+  range: jest.fn(),
+  maybeSingle: jest.fn(),
+  throwOnError: jest.fn(),
+  returns: jest.fn(),
+  csv: jest.fn(),
+  overrideTypes: jest.fn(),
 }
 
 // Todos os métodos do builder retornam o próprio chainable
@@ -57,6 +70,10 @@ const mockRpc = jest.fn().mockResolvedValue({ data: null, error: null })
 
 jest.mock('@/services/supabase', () => ({
   supabase: {
+    from: jest.fn().mockReturnValue(chainable),
+    rpc: mockRpc,
+  },
+  supabasePublic: {
     from: jest.fn().mockReturnValue(chainable),
     rpc: mockRpc,
   },
@@ -164,9 +181,11 @@ beforeEach(() => {
   chainable.then = jest.fn((resolve: (v: unknown) => void) => {
     resolve(nextResult())
   })
-  const { supabase } = require('@/services/supabase')
+  const { supabase, supabasePublic } = require('@/services/supabase')
   supabase.from = jest.fn().mockReturnValue(chainable)
   supabase.rpc = jest.fn().mockResolvedValue({ data: null, error: null })
+  supabasePublic.from = jest.fn().mockReturnValue(chainable)
+  supabasePublic.rpc = jest.fn().mockResolvedValue({ data: null, error: null })
 })
 
 // ─── listTemplates ────────────────────────────────────────────────────────────
@@ -197,6 +216,7 @@ describe('formsService.listTemplates', () => {
 describe('formsService.createTemplate', () => {
   it('cria template e retorna dados', async () => {
     const created = makeTemplate()
+    queueResult({ data: null, error: null }) // duplicate check: not found
     queueResult({ data: created, error: null })
 
     const result = await formsService.createTemplate('psych-1', {
@@ -210,6 +230,7 @@ describe('formsService.createTemplate', () => {
   })
 
   it('retorna erro quando insert falha', async () => {
+    queueResult({ data: null, error: null }) // duplicate check: not found
     queueResult({ data: null, error: { message: 'duplicate key', code: '23505' } })
 
     const result = await formsService.createTemplate('psych-1', { title: 'X' })

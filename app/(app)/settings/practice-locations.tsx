@@ -33,10 +33,16 @@ interface PracticeLocation {
   is_active: boolean
 }
 
-const EMPTY_FORM = {
+type PracticeLocationForm = {
+  name: string; address: string; postal_code: string; city: string;
+  contact_person: string; phone: string; phone_ddi: string; email: string;
+  commission_type: 'percentage' | 'fixed' | 'none'; commission_value: string;
+  payment_conditions: string; notes: string; color: string; is_active: boolean;
+}
+const EMPTY_FORM: PracticeLocationForm = {
   name: '', address: '', postal_code: '', city: '',
   contact_person: '', phone: '', phone_ddi: '', email: '',
-  commission_type: 'none' as const, commission_value: '',
+  commission_type: 'none', commission_value: '',
   payment_conditions: '', notes: '', color: '#6366F1',
   is_active: true,
 }
@@ -58,13 +64,16 @@ export default function PracticeLocationsScreen() {
   })
 
   const save = useMutation({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mutationFn: async ({ id, ...d }: any) => {
       const payload = { ...d, psychologist_id: profile?.id, commission_value: d.commission_value ? Number(d.commission_value) : null }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any
       if (id) {
-        const { error } = await supabase.from('practice_locations').update(payload).eq('id', id)
+        const { error } = await sb.from('practice_locations').update(payload).eq('id', id)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('practice_locations').insert({ ...payload, sort_order: (query.data?.length ?? 0) + 1 })
+        const { error } = await sb.from('practice_locations').insert({ ...payload, sort_order: (query.data?.length ?? 0) + 1 })
         if (error) throw error
       }
     },
@@ -82,9 +91,9 @@ export default function PracticeLocationsScreen() {
   const { toast, showToast, hideToast } = useToast()
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<PracticeLocation | null>(null)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, setForm] = useState<PracticeLocationForm>(EMPTY_FORM)
 
-  const set = (key: string, value: string) => setForm((p) => ({ ...p, [key]: value }))
+  const set = (key: keyof PracticeLocationForm, value: string) => setForm((p) => ({ ...p, [key]: value }))
 
   const openCreate = () => { setEditing(null); setForm(EMPTY_FORM); setModal(true) }
   const openEdit = (l: PracticeLocation) => {

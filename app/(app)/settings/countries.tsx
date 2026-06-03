@@ -24,7 +24,8 @@ interface Country {
 
 const TAX_LABELS: Record<string, string> = { nif: 'NIF', cpf: 'CPF', other: 'Outro' }
 
-const EMPTY = { name: '', code: '', ddi: '', tax_id_type: 'other' as const, is_active: true, sort_order: 0 }
+type CountryForm = { name: string; code: string; ddi: string; tax_id_type: 'nif' | 'cpf' | 'other'; is_active: boolean; sort_order: number }
+const EMPTY: CountryForm = { name: '', code: '', ddi: '', tax_id_type: 'other', is_active: true, sort_order: 0 }
 
 export default function CountriesScreen() {
   const insets = useSafeAreaInsets()
@@ -63,7 +64,7 @@ export default function CountriesScreen() {
   const { toast, showToast, hideToast } = useToast()
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Country | null>(null)
-  const [form, setForm] = useState<typeof EMPTY>(EMPTY)
+  const [form, setForm] = useState<CountryForm>(EMPTY)
 
   const openCreate = () => { setEditing(null); setForm(EMPTY); setModal(true) }
   const openEdit = (c: Country) => {
