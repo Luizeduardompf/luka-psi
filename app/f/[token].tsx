@@ -907,12 +907,17 @@ export default function PublicFormPage() {
         >
           {submitError ? (
             <View style={{
-              backgroundColor: '#FEF2F2', borderRadius: 8, padding: 10,
-              borderWidth: 1, borderColor: '#FECACA',
+              backgroundColor: '#FEF2F2', borderRadius: 8, padding: 12,
+              borderWidth: 1, borderColor: '#FECACA', gap: 4,
             }}>
-              <Text style={{ fontSize: 13, color: '#DC2626', lineHeight: 18 }}>
-                {submitError}
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#DC2626', marginBottom: 4 }}>
+                ⚠ Corrija os erros antes de enviar:
               </Text>
+              {submitError.split('\n').map((line, i) => (
+                <Text key={i} style={{ fontSize: 13, color: '#DC2626', lineHeight: 18 }}>
+                  · {line}
+                </Text>
+              ))}
             </View>
           ) : null}
           <Button
