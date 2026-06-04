@@ -11,6 +11,13 @@
 - Stack: React Native + Expo, react-hook-form + zod, Supabase (auth + DB + storage)
 - Pasta do projeto: `Luka/` (workspace conectado)
 
+## Versionamento
+
+- Arquivo: `src/constants/version.ts` — exporta `APP_VERSION` (ex: `v0.1.2`)
+- Formato: `v0.{minor}.{patch}` — `0` = MVP, patch incrementado a cada alteração
+- **Sempre rodar antes de commitar:** `bash scripts/bump-version.sh`
+- Exibido no rodapé do Menu no app
+
 ## Preferências do utilizador (Luiz)
 
 - Resposta em português BR, código/identificadores técnicos em inglês

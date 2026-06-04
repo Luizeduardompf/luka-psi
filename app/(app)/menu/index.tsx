@@ -212,6 +212,14 @@ export default function MenuScreen() {
           onPress={() => {}}
           color={theme.colors.success}
         />
+        {/* Sobre */}
+        <MenuItem
+          icon="information-circle-outline"
+          label="Sobre o Luka"
+          description="Versão, créditos e informações"
+          onPress={() => router.push('/(app)/menu/sobre')}
+          color={theme.colors.text.tertiary}
+        />
       </ScrollView>
     </View>
   )

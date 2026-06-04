@@ -1,60 +1,166 @@
-# Luka — Diretrizes do Projeto
+# Luka.app
 
-## Stack
+## Objetivo
 
-- **React Native + Expo SDK 52** (managed workflow)
-- **Supabase** — banco, auth, storage, RLS
-- **Vercel** — deploy web (SPA)
-- **EAS Update** — publicação de alterações para Expo Go (iPhone)
-- **GitHub** — repositório principal (`main`)
+Entregar tarefas completas, funcionais, testadas e prontas para uso.
 
----
+Assuma que o usuário frequentemente inicia uma tarefa e se ausenta.
 
-## ⚠️ Checklist de Deploy — Após qualquer alteração
-
-Sempre que uma funcionalidade estiver pronta, lembrar de atualizar **todos** os destinos relevantes:
-
-### 1. Git / GitHub
-```bash
-git add -A
-git commit -m "descrição clara do que mudou"
-git push origin main
-```
-
-### 2. Vercel (web)
-- Push em `main` → Vercel faz build automático (`npx expo export --platform web`)
-- Verificar deploy em: https://vercel.com/luizeduardompf3-9075s-projects/luka-psi/deployments
-- URL prod: https://luka-psi-mocha.vercel.app
-
-### 3. Expo Go / iPhone (EAS Update)
-```bash
-npx eas-cli update --branch main --message "descrição do que mudou"
-```
-- Publica nos servidores da Expo — iPhone atualiza automaticamente ao abrir o app
-- Não precisa de Mac ligado nem mesma rede Wi-Fi
-- Login Expo: `luizeduardompf.lixo@gmail.com` (Google)
-
-### 4. Supabase (se houver mudanças no banco)
-- Migrations via Management API (não CLI — DNS bloqueado no sandbox)
-- Ver credenciais em memória: `supabase_credentials.md`
-- Após migration, verificar RLS e policies
+O objetivo é concluir o trabalho sem depender de acompanhamento constante.
 
 ---
 
-## Contas dos Serviços
+## Autonomia
 
-| Serviço | Email |
-|---|---|
-| GitHub | `luizeduardompf@gmail.com` |
-| Supabase | `luizeduardompf@gmail.com` |
-| Vercel | `luizeduardompf3@gmail.com` ← diferente! |
-| Expo Go / EAS | `luizeduardompf.lixo@gmail.com` (Google) |
+Se você possui acesso para executar uma ação, execute.
+
+Não delegue tarefas ao usuário quando puder realizá-las.
+
+Isso inclui:
+
+* Terminal
+* Navegador autenticado
+* GitHub
+* Supabase
+* Vercel
+* Expo
+* EAS Update
+* MCPs
+* APIs
+* Simuladores
+
+Somente solicitar ajuda quando existir:
+
+* falta de acesso;
+* autenticação pendente;
+* MFA/2FA;
+* CAPTCHA;
+* permissão insuficiente;
+* risco de perda de dados.
 
 ---
 
-## Notas Críticas
+# Documentação Complementar
 
-- Rota pública de formulários: `/f/:token` (NÃO `/forms/:token`)
-- `eas-cli` sem sudo — usar sempre via `npx eas-cli`
-- Git no sandbox tem restrições — usar `.command` files pelo Finder para commits
-- `vercel.json` tem rewrite SPA — não remover
+Antes de iniciar qualquer tarefa, leia também:
+
+- PROJECT_CONTEXT.md
+- ARCHITECTURE.md
+- SUPABASE.md
+- DEPLOY.md
+- ACCOUNTS.md
+
+Esses arquivos fazem parte das instruções do projeto e devem ser considerados juntamente com este documento.
+
+---
+
+## Verificação Inicial (Obrigatória)
+
+Antes de iniciar qualquer tarefa:
+
+Verifique acesso a:
+
+* Terminal
+* Navegador
+* GitHub
+* Supabase
+* Vercel
+* Expo
+* Simulador iOS
+* Simulador Android
+
+Se faltar algo:
+
+Liste TODAS as permissões necessárias de uma única vez.
+
+---
+
+## Stack Oficial
+
+* React Native
+* Expo SDK 54
+* TypeScript
+* Supabase
+* GitHub
+* Vercel
+* EAS Update
+
+---
+
+## Desenvolvimento
+
+Priorizar:
+
+1. Desenvolvimento local
+2. Simulador iOS
+3. Simulador Android
+4. Testes locais
+
+Evitar depender exclusivamente do Expo Go durante o desenvolvimento.
+
+---
+
+## Versionamento
+
+Após qualquer alteração de código:
+
+bash scripts/bump-version.sh
+
+Arquivo:
+
+src/constants/version.ts
+
+Variável:
+
+APP_VERSION
+
+---
+
+## Banco de Dados
+
+Sempre que necessário:
+
+* criar migration;
+* executar migration;
+* validar resultado;
+* validar RLS;
+* validar policies.
+
+Não deixar migrations pendentes para o usuário executar.
+
+---
+
+## Deploy
+
+Após concluir:
+
+* Commitar alterações
+* Fazer push para GitHub
+* Validar Vercel
+* Publicar EAS Update
+* Confirmar atualização disponível no Expo Go
+
+---
+
+## Qualidade
+
+Antes de concluir:
+
+* TypeScript sem erros
+* Build sem erros
+* Sem código morto
+* Sem logs temporários
+* Testes executados
+
+---
+
+## Relatório Final
+
+Informar:
+
+* alterações realizadas;
+* arquivos modificados;
+* versão gerada;
+* testes executados;
+* migrations aplicadas;
+* deploy realizado.
