@@ -1,17 +1,15 @@
 #!/bin/bash
-cd "$(dirname "$0")"
-rm -f .git/index.lock
+cd "$(dirname "$0")/.."
+rm -f .git/HEAD.lock .git/index.lock 2>/dev/null || true
 git add -A
-git commit -m "feat: settings screens, home redesign, forms improvements
+git commit -m "fix: header do dashboard fixo fora do scroll
 
-- Profile screen: renamed 'nome comercial' -> 'nome profissional', image upload for logo/signature, gender dropdown
-- Home screen: avatar + greeting left, notification bell + settings gear right
-- Tab layout: Configuracoes removed from tab bar
-- Forms screen: removed 'Entrar' button, all cards clickable to enter
-- PatientForm: replaced gender chips with SelectDropdown, added DDI field for phone
-- Settings: added Generos/Sexo, Paises, Locais de pratica, Terminologia sections
-- New screens: terminology, genders, countries, practice-locations (all full CRUD)
-- forms/send.tsx: field type dropdown, date validation with auto-mask and future date check
-- Migration 009: RLS fixes, new tables, profile columns"
-git push origin main
-echo "Done!"
+- Header (avatar + saudação + notificações) movido para fora do ScrollView
+- Permanece visível durante scroll do conteúdo
+- paddingTop respeita safe area inset
+
+v0.1.8"
+git push origin sdkUpdating:main
+echo ""
+echo "✅ Done!"
+read -p "Pressione Enter para fechar..."

@@ -215,9 +215,57 @@ export default function DashboardScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      {/* Header fixo fora do scroll */}
+      <View
+        style={{
+          paddingTop: insets.top + theme.spacing.sm,
+          paddingBottom: theme.spacing.md,
+          paddingHorizontal: theme.spacing.md,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        {/* Left: avatar + greeting */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+          <Avatar name={displayName} uri={profile?.avatar_url} size="lg" />
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                ...theme.typography.bodySmall,
+                color: theme.colors.text.secondary,
+              }}
+            >
+              {greetingByHour()},
+            </Text>
+            <Text
+              style={{
+                ...theme.typography.h2,
+                color: theme.colors.text.primary,
+              }}
+            >
+              {greetingName}
+            </Text>
+          </View>
+        </View>
+        {/* Right: notifications */}
+        <TouchableOpacity
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={{
-          paddingTop: insets.top + theme.spacing.md,
           paddingBottom: insets.bottom + theme.spacing.xl,
           paddingHorizontal: theme.spacing.md,
           gap: theme.spacing.lg,
@@ -231,53 +279,6 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* Left: avatar + greeting */}
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}
-          >
-            <Avatar name={displayName} uri={profile?.avatar_url} size="lg" />
-            <View style={{ flex: 1 }}>
-              <Text
-                style={{
-                  ...theme.typography.bodySmall,
-                  color: theme.colors.text.secondary,
-                }}
-              >
-                {greetingByHour()},
-              </Text>
-              <Text
-                style={{
-                  ...theme.typography.h2,
-                  color: theme.colors.text.primary,
-                }}
-              >
-                {greetingName}
-              </Text>
-            </View>
-          </View>
-          {/* Right: notifications */}
-          <TouchableOpacity
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="notifications-outline" size={24} color={theme.colors.text.primary} />
-          </TouchableOpacity>
-        </View>
-
         {/* Quick Actions */}
         <Card>
           <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
