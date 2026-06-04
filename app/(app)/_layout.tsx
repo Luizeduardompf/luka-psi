@@ -1,6 +1,7 @@
 import { Tabs, Redirect } from 'expo-router'
 import { StackActions } from '@react-navigation/native'
 import { View, ActivityIndicator } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { useSessionStore } from '@/stores/session.store'
 import { theme } from '@/constants/theme'
@@ -30,6 +31,7 @@ function makeTabResetListener(_tabName: string) {
 
 export default function AppLayout() {
   const { session, profile, isInitialized } = useSessionStore()
+  const insets = useSafeAreaInsets()
   const isAuthenticated = !!session
 
   if (!isInitialized) {
@@ -66,8 +68,8 @@ export default function AppLayout() {
           backgroundColor: theme.colors.surface,
           borderTopColor: theme.colors.border,
           borderTopWidth: 1,
-          height: 56,
-          paddingBottom: 6,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom + 6,
           paddingTop: 6,
         },
         tabBarLabelStyle: {

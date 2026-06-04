@@ -12,6 +12,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   Switch,
   Linking,
   Clipboard,
@@ -365,6 +367,7 @@ export default function SendFormScreen() {
               animationType="slide"
               onRequestClose={() => setEditingExtraSection(null)}
             >
+              <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
               <View
                 style={{
                   flex: 1,
@@ -487,6 +490,7 @@ export default function SendFormScreen() {
                   </View>
                 </View>
               </View>
+              </KeyboardAvoidingView>
             </Modal>
           </View>
         )

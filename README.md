@@ -238,7 +238,6 @@ As seguintes contas podem ser utilizadas para testes locais e validação funcio
 | Perfil | Email | Senha |
 |----------|----------|----------|
 | Psicóloga | ana.silva@luka.app | Luka1234 |
-| Psicólogo | joao.silva@luka.app | Luka1234 |
 | Demo Geral | demo@luka.app | Demo123456 |
 
 ### Login

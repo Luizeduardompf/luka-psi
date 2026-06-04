@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, Alert,
-  TextInput, Modal, ActivityIndicator, RefreshControl,
+  TextInput, Modal,
+  KeyboardAvoidingView,
+  Platform, ActivityIndicator, RefreshControl,
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -182,6 +184,7 @@ export default function PracticeLocationsScreen() {
       </ScrollView>
 
       <Modal visible={modal} transparent animationType="slide" onRequestClose={() => setModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <ScrollView style={{ maxHeight: '90%' }} contentContainerStyle={{ flexGrow: 1, justifyContent: 'flex-end' }} keyboardShouldPersistTaps="handled">
             <View style={{
@@ -283,6 +286,7 @@ export default function PracticeLocationsScreen() {
             </View>
           </ScrollView>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   )

@@ -46,6 +46,14 @@ const TAB_LABELS: Record<ActiveTab, string> = {
   financial: 'Financeiro',
 }
 
+const TAB_ICONS: Record<ActiveTab, keyof typeof Ionicons.glyphMap> = {
+  info: 'person-outline',
+  sessions: 'calendar-outline',
+  forms: 'document-text-outline',
+  attachments: 'attach-outline',
+  financial: 'wallet-outline',
+}
+
 function FinancialTab() {
   // Valores placeholder — serão calculados a partir das sessões quando implementadas
   const totalBilled  = 0
@@ -500,28 +508,23 @@ export default function PatientDetailScreen() {
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
+            accessibilityLabel={TAB_LABELS[tab]}
             style={{
               flex: 1,
               paddingVertical: 12,
               alignItems: 'center',
+              justifyContent: 'center',
               borderBottomWidth: 2,
               borderBottomColor:
                 activeTab === tab ? theme.colors.primary : 'transparent',
             }}
             activeOpacity={0.7}
           >
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: '600',
-                color:
-                  activeTab === tab
-                    ? theme.colors.primary
-                    : theme.colors.text.tertiary,
-              }}
-            >
-              {TAB_LABELS[tab]}
-            </Text>
+            <Ionicons
+              name={TAB_ICONS[tab]}
+              size={22}
+              color={activeTab === tab ? theme.colors.primary : theme.colors.text.tertiary}
+            />
           </TouchableOpacity>
         ))}
       </View>

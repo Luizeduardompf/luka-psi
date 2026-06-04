@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, Alert,
-  TextInput, Modal, ActivityIndicator, RefreshControl,
+  TextInput, Modal,
+  KeyboardAvoidingView,
+  Platform, ActivityIndicator, RefreshControl,
 } from 'react-native'
 import { router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -141,6 +143,7 @@ export default function GendersScreen() {
       </ScrollView>
 
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => setModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <View style={{
             backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
@@ -170,6 +173,7 @@ export default function GendersScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   )

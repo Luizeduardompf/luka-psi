@@ -12,6 +12,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native'
 import { router } from 'expo-router'
 import { Linking } from 'react-native'
@@ -355,6 +357,10 @@ export default function FormsLibraryScreen() {
         animationType="slide"
         onRequestClose={() => setCreateModalVisible(false)}
       >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
         <View
           style={{
             flex: 1,
@@ -414,6 +420,7 @@ export default function FormsLibraryScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   )

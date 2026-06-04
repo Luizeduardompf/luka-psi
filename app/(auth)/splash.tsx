@@ -1,14 +1,5 @@
-import React, { useEffect } from 'react'
-import { View, Text, StyleSheet } from 'react-native'
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withDelay,
-  withSequence,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated'
+import React, { useEffect, useRef } from 'react'
+import { View, Text, StyleSheet, Animated, Easing } from 'react-native'
 import { router, usePathname } from 'expo-router'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
@@ -19,26 +10,14 @@ export default function SplashScreen() {
   const { session, isInitialized } = useSessionStore()
   const isAuthenticated = !!session
   const pathname = usePathname()
-  // Não redirecionar quando estiver em rota pública de formulários
   const isFocused = !pathname.startsWith('/f')
 
-  const opacity = useSharedValue(0)
-  const scale = useSharedValue(0.82)
-  const taglineOpacity = useSharedValue(0)
-
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-    transform: [{ scale: scale.value }],
-  }))
-
-  const taglineStyle = useAnimatedStyle(() => ({
-    opacity: taglineOpacity.value,
-  }))
+  const opacity = useRef(new Animated.Value(0)).current
+  const scale = useRef(new Animated.Value(0.82)).current
+  const taglineOpacity = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
     const navigate = () => {
-      // Skip navigation if this screen is mounted in the background
-      // (e.g. when deep-linking directly to /forms/[token])
       if (!isFocused) return
       if (isInitialized && isAuthenticated) {
         router.replace('/(app)')
@@ -47,26 +26,32 @@ export default function SplashScreen() {
       }
     }
 
-    opacity.value = withTiming(1, {
-      duration: 700,
-      easing: Easing.out(Easing.cubic),
-    })
-    scale.value = withTiming(1, {
-      duration: 700,
-      easing: Easing.out(Easing.back(1.2)),
-    })
-    taglineOpacity.value = withDelay(
-      500,
-      withTiming(1, { duration: 600 }),
-    )
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 700,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 700,
+        easing: Easing.out(Easing.back(1.2)),
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.delay(500),
+        Animated.timing(taglineOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start()
 
-    // Navigate after splash duration
-    const timer = setTimeout(() => {
-      runOnJS(navigate)()
-    }, config.splash.duration)
-
+    const timer = setTimeout(navigate, config.splash.duration)
     return () => clearTimeout(timer)
-  }, [isAuthenticated, isInitialized, isFocused, opacity, scale, taglineOpacity])
+  }, [isAuthenticated, isInitialized, isFocused])
 
   return (
     <LinearGradient
@@ -75,14 +60,14 @@ export default function SplashScreen() {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-      <Animated.View style={[styles.content, logoStyle]}>
+      <Animated.View style={[styles.content, { opacity, transform: [{ scale }] }]}>
         <View style={styles.iconContainer}>
           <Ionicons name="heart" size={52} color="#FFFFFF" />
         </View>
         <Text style={styles.title}>Luka</Text>
       </Animated.View>
 
-      <Animated.View style={[styles.taglineContainer, taglineStyle]}>
+      <Animated.View style={[styles.taglineContainer, { opacity: taglineOpacity }]}>
         <Text style={styles.tagline}>Gestão humanizada para psicólogos</Text>
       </Animated.View>
     </LinearGradient>

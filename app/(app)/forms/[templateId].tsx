@@ -13,6 +13,8 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native'
 import { router, useLocalSearchParams } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
@@ -363,6 +365,7 @@ export default function FormEditorScreen() {
         animationType="slide"
         onRequestClose={() => setAddQuestionModal(null)}
       >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View
           style={{
             flex: 1,
@@ -456,6 +459,7 @@ export default function FormEditorScreen() {
             />
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Modal: Adicionar seção */}
@@ -465,6 +469,7 @@ export default function FormEditorScreen() {
         animationType="slide"
         onRequestClose={() => setAddSectionVisible(false)}
       >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View
           style={{
             flex: 1,
@@ -521,6 +526,7 @@ export default function FormEditorScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   )
