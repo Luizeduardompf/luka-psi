@@ -36,6 +36,18 @@ interface PatientFormProps {
   onSubmit: (data: PatientSchemaData) => Promise<void>
   isLoading?: boolean
   submitLabel?: string
+  /** Campos preenchidos pelo paciente via formulário. Chave = field_key do paciente. */
+  fieldSources?: Record<string, { submission_id: string | null; filled_at: string }>
+}
+
+/** Indicativo discreto exibido abaixo de campos preenchidos via formulário */
+function FieldSourceHint({ visible }: { visible: boolean }) {
+  if (!visible) return null
+  return (
+    <Text style={{ fontSize: 11, color: theme.colors.text.tertiary, marginTop: -6, marginBottom: 8, marginLeft: 2 }}>
+      ℹ Preenchido pelo paciente através de formulário
+    </Text>
+  )
 }
 
 const SectionHeader = memo(function SectionHeader({ title }: { title: string }) {
@@ -255,7 +267,9 @@ export const PatientForm = memo(function PatientForm({
   onSubmit,
   isLoading = false,
   submitLabel = 'Salvar',
+  fieldSources = {},
 }: PatientFormProps) {
+  const hasSource = (key: string) => !!fieldSources[key]
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedInsurerId, setSelectedInsurerId] = useState<string>(
     initialData?.insurer_id ?? '',
@@ -524,6 +538,7 @@ export const PatientForm = memo(function PatientForm({
               </View>
             )}
           />
+          <FieldSourceHint visible={hasSource('date_of_birth')} />
 
           {/* Gender — dropdown from genders table */}
           <Controller
@@ -539,6 +554,7 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+          <FieldSourceHint visible={hasSource('gender_id')} />
 
           <Controller
             control={control}
@@ -556,6 +572,7 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+          <FieldSourceHint visible={hasSource('profession')} />
 
           {/* Education */}
           <Controller
@@ -571,6 +588,7 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+          <FieldSourceHint visible={hasSource('education')} />
 
           {/* Civil status */}
           <Controller
@@ -586,6 +604,7 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+          <FieldSourceHint visible={hasSource('civil_status_id')} />
 
           {/* Status */}
           <Controller
@@ -624,6 +643,7 @@ export const PatientForm = memo(function PatientForm({
                 />
               )}
             />
+            <FieldSourceHint visible={hasSource('email')} />
           </View>
 
           {/* Phone + DDI */}
@@ -663,6 +683,7 @@ export const PatientForm = memo(function PatientForm({
               />
             </View>
           </View>
+          <FieldSourceHint visible={hasSource('phone')} />
         </Card>
 
         {/* ── DOCUMENTO ── */}
@@ -727,6 +748,7 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+          <FieldSourceHint visible={hasSource('address')} />
 
           <Controller
             control={control}
@@ -801,6 +823,7 @@ export const PatientForm = memo(function PatientForm({
                 {errors.country_id.message}
               </Text>
             )}
+            <FieldSourceHint visible={hasSource('country_id')} />
           </View>
         </Card>
 
@@ -1087,6 +1110,7 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+          <FieldSourceHint visible={hasSource('insurer_id')} />
 
           <Controller
             control={control}
@@ -1223,6 +1247,7 @@ export const PatientForm = memo(function PatientForm({
               />
             )}
           />
+          <FieldSourceHint visible={hasSource('notes')} />
         </Card>
       </ScrollView>
 

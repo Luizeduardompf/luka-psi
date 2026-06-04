@@ -17,7 +17,7 @@ import { Badge, statusVariantMap, statusLabelMap } from '@/components/ui/Badge'
 import { PatientForm } from '@/components/patients/PatientForm'
 import { PatientFormsTab } from '@/components/forms/PatientFormsTab'
 import { theme } from '@/constants/theme'
-import { usePatient, useUpdatePatient, useDeletePatient } from '@/hooks/usePatients'
+import { usePatient, useUpdatePatient, useDeletePatient, usePatientFieldSources, useClearPatientFieldSources } from '@/hooks/usePatients'
 import { useCivilStatuses, useInsurers, usePlans, useCountries, usePracticeLocations } from '@/hooks/useLookups'
 import { formatDate, formatPhone, formatCpf, formatDocument } from '@/utils/format'
 
@@ -327,6 +327,8 @@ export default function PatientDetailScreen() {
   const { data: patient, isLoading, refetch } = usePatient(id)
   const updateMutation = useUpdatePatient(id)
   const deleteMutation = useDeletePatient()
+  const { data: fieldSources = {} } = usePatientFieldSources(id)
+  const clearFieldSources = useClearPatientFieldSources(id)
   const { data: gendersData = [] } = useGenders()
   const { data: civilStatuses = [] } = useCivilStatuses()
   const { data: insurers = [] } = useInsurers()
@@ -411,6 +413,14 @@ export default function PatientDetailScreen() {
               setEditVisible(false)
               showToast('Paciente atualizado com sucesso!')
               void refetch()
+              // Limpar flags de campos que o psicólogo editou manualmente
+              const editedKeys = Object.keys(fieldSources).filter((key) => {
+                const currentVal = (data as Record<string, unknown>)[key]
+                return currentVal !== undefined
+              })
+              if (editedKeys.length > 0) {
+                void clearFieldSources.mutate(editedKeys)
+              }
             },
             onError: (err) => {
               Alert.alert('Erro ao atualizar', err.message)
@@ -853,6 +863,7 @@ export default function PatientDetailScreen() {
             onSubmit={handleUpdate}
             isLoading={updateMutation.isPending}
             submitLabel="Salvar alterações"
+            fieldSources={fieldSources}
           />
         </View>
       </Modal>

@@ -129,3 +129,36 @@ export function useDeletePatient() {
     },
   })
 }
+
+// ─── Field sources ─────────────────────────────────────────────────────────────
+export const fieldSourceKeys = {
+  all: ['patient_field_sources'] as const,
+  detail: (patientId: string) => [...fieldSourceKeys.all, patientId] as const,
+}
+
+export function usePatientFieldSources(patientId: string) {
+  return useQuery({
+    queryKey: fieldSourceKeys.detail(patientId),
+    queryFn: async () => {
+      const result = await patientsService.getPatientFieldSources(patientId)
+      if (result.error) throw new Error(result.error)
+      return result.data ?? {}
+    },
+    enabled: !!patientId,
+    staleTime: 1000 * 60 * 5,
+  })
+}
+
+export function useClearPatientFieldSources(patientId: string) {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (fieldKeys: string[]) => {
+      const result = await patientsService.clearPatientFieldSources(patientId, fieldKeys)
+      if (result.error) throw new Error(result.error)
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: fieldSourceKeys.detail(patientId) })
+    },
+  })
+}

@@ -23,6 +23,10 @@ import {
   ServiceResult,
   DEFAULT_SEND_MESSAGE,
 } from '@/types/forms.types'
+import {
+  PROFILE_FIELDS,
+  PROFILE_FIELD_CONSTANT_OPTIONS,
+} from '@/constants/patientProfileFields'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -34,18 +38,64 @@ function buildPublicUrl(token: string): string {
   return `${PUBLIC_BASE_URL}/f/${token}`
 }
 
-function buildSnapshot(
+/**
+ * Busca opções de lookup para todos os campos profile_field com lookupTable.
+ * Retorna um Record<fieldKey, {id, label}[]> para incluir no snapshot.
+ */
+async function buildProfileFieldOptions(
+  questions: FormQuestionWithOptions[],
+): Promise<Record<string, { id: string; label: string }[]>> {
+  const options: Record<string, { id: string; label: string }[]> = {}
+
+  const profileQuestions = questions.filter(
+    (q) => q.type === 'profile_field' && q.profile_field_key,
+  )
+  if (profileQuestions.length === 0) return options
+
+  for (const q of profileQuestions) {
+    const key = q.profile_field_key!
+    if (options[key]) continue // já buscado
+
+    const fieldDef = PROFILE_FIELDS.find((f) => f.key === key)
+    if (!fieldDef) continue
+
+    if (fieldDef.lookupConstant) {
+      const constantOpts = PROFILE_FIELD_CONSTANT_OPTIONS[fieldDef.lookupConstant] ?? []
+      options[key] = constantOpts.map((o) => ({ id: o.value, label: o.label }))
+      continue
+    }
+
+    if (fieldDef.lookupTable) {
+      const { data } = await supabase
+        .from(fieldDef.lookupTable)
+        .select('id, name')
+        .order('name', { ascending: true })
+      if (data) {
+        options[key] = (data as { id: string; name: string }[]).map((r) => ({
+          id: r.id,
+          label: r.name,
+        }))
+      }
+    }
+  }
+
+  return options
+}
+
+async function buildSnapshot(
   template: FormTemplateWithDetails,
   customMessage: string | null,
   expiresAt: string | null,
   extraSections: SendFormInput['extra_sections'],
-): FormSnapshot {
+): Promise<FormSnapshot> {
   const sections: SnapshotSection[] = template.sections.map((s) => ({
     id: s.id,
     title: s.title,
     description: s.description,
     sort_order: s.sort_order,
   }))
+
+  const allQuestions = template.sections.flatMap((s) => s.questions)
 
   const questions: SnapshotQuestion[] = template.sections.flatMap((s) =>
     s.questions.map((q) => ({
@@ -66,6 +116,7 @@ function buildSnapshot(
         label: o.label,
         sort_order: o.sort_order,
       })),
+      profile_field_key: q.profile_field_key ?? null,
     })),
   )
 
@@ -96,10 +147,14 @@ function buildSnapshot(
           scale_max: eq.scale_max ?? 10,
           scale_step: eq.scale_step ?? 1,
           options: [],
+          profile_field_key: null,
         })
       }
     }
   }
+
+  // Buscar opções de lookup para campos de perfil
+  const profile_field_options = await buildProfileFieldOptions(allQuestions)
 
   return {
     template_id: template.id,
@@ -110,6 +165,7 @@ function buildSnapshot(
     custom_message: customMessage,
     expires_at: expiresAt,
     snapshotted_at: new Date().toISOString(),
+    profile_field_options,
   }
 }
 
@@ -483,6 +539,7 @@ export const formsService = {
           scale_min: input.scale_min ?? 1,
           scale_max: input.scale_max ?? 10,
           scale_step: input.scale_step ?? 1,
+          profile_field_key: input.profile_field_key ?? null,
         } as never)
         .select()
         .single()
@@ -624,7 +681,7 @@ export const formsService = {
       }
 
       // Construir snapshot imutável
-      const snapshot = buildSnapshot(
+      const snapshot = await buildSnapshot(
         templateResult.data,
         input.custom_message ?? null,
         input.expires_at ?? null,
@@ -925,6 +982,67 @@ export const formsService = {
         submission_id: submissionId,
         event: 'completed',
       } as never)
+
+      // ── Atualizar perfil do paciente com respostas de profile_field ──────────
+      const patientId = (sub as FormSubmission).patient_id
+      const profileQuestions = snapshot.questions.filter(
+        (q) => q.type === 'profile_field' && q.profile_field_key,
+      )
+
+      if (profileQuestions.length > 0) {
+        // Mapear respostas por question_id
+        const responseMap = new Map(responses.map((r) => [r.question_id, r]))
+
+        // Construir objeto de update para patients
+        const patientUpdate: Record<string, unknown> = {}
+        const fieldSources: Array<{ patient_id: string; field_key: string; submission_id: string; filled_at: string }> = []
+
+        for (const q of profileQuestions) {
+          const fieldKey = q.profile_field_key!
+          const r = responseMap.get(q.id)
+          if (!r || !hasAnswer(r)) continue
+
+          // Mapear valor da resposta para o campo correto do paciente
+          const fieldDef = PROFILE_FIELDS.find((f) => f.key === fieldKey)
+          if (!fieldDef) continue
+
+          let value: unknown = null
+          if (fieldDef.inputType === 'date') {
+            value = r.answer_date
+          } else if (fieldDef.inputType === 'boolean') {
+            value = r.answer_boolean
+          } else if (fieldDef.inputType === 'dropdown') {
+            // answer_text guarda o id da opção
+            value = r.answer_text
+          } else {
+            // text / long_text
+            value = r.answer_text
+          }
+
+          if (value === null || value === undefined) continue
+          patientUpdate[fieldKey] = value
+          fieldSources.push({
+            patient_id: patientId,
+            field_key: fieldKey,
+            submission_id: submissionId,
+            filled_at: new Date().toISOString(),
+          })
+        }
+
+        if (Object.keys(patientUpdate).length > 0) {
+          await supabasePublic
+            .from('patients')
+            .update({ ...patientUpdate, updated_at: new Date().toISOString() } as never)
+            .eq('id', patientId)
+
+          // Upsert em patient_field_sources (ON CONFLICT patient_id + field_key → update)
+          for (const src of fieldSources) {
+            await supabasePublic
+              .from('patient_field_sources')
+              .upsert(src as never, { onConflict: 'patient_id,field_key' })
+          }
+        }
+      }
 
       return { data: data as FormSubmission, error: null }
     } catch (err) {

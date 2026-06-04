@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { theme } from '@/constants/theme'
 import { SnapshotQuestion } from '@/types/forms.types'
 import { FormResponse } from '@/types/forms.types'
+import { PROFILE_FIELD_BY_KEY } from '@/constants/patientProfileFields'
 
 interface Props {
   question: SnapshotQuestion
@@ -23,6 +24,8 @@ interface Props {
   onChange: (response: Partial<FormResponse>) => void
   isReadOnly?: boolean
   error?: string | null
+  /** Opções de lookup para campos de perfil. Vem do snapshot.profile_field_options */
+  profileFieldOptions?: Record<string, { id: string; label: string }[]>
 }
 
 // Converte DD/MM/AAAA → YYYY-MM-DD (retorna null se inválido)
@@ -39,7 +42,7 @@ export function parseDateDMY(value: string): string | null {
   return `${y}-${m}-${d}`
 }
 
-export function QuestionRenderer({ question, response, onChange, isReadOnly = false, error }: Props) {
+export function QuestionRenderer({ question, response, onChange, isReadOnly = false, error, profileFieldOptions = {} }: Props) {
   const [scaleValue, setScaleValue] = useState<number | null>(
     response?.answer_number ?? null,
   )
@@ -444,6 +447,131 @@ export function QuestionRenderer({ question, response, onChange, isReadOnly = fa
           </View>
         </View>
       )}
+      {/* ── Dado do perfil ── */}
+      {question.type === 'profile_field' && (() => {
+        const fieldKey = question.profile_field_key
+        if (!fieldKey) return null
+        const fieldDef = PROFILE_FIELD_BY_KEY[fieldKey as keyof typeof PROFILE_FIELD_BY_KEY]
+        if (!fieldDef) return null
+
+        // boolean → botões Sim/Não
+        if (fieldDef.inputType === 'boolean') {
+          return (
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              {[true, false].map((val) => (
+                <TouchableOpacity
+                  key={String(val)}
+                  onPress={() => !isReadOnly && onChange({ answer_boolean: val })}
+                  style={{
+                    flex: 1, paddingVertical: 12,
+                    borderRadius: theme.radius.md, borderWidth: 2,
+                    borderColor: response?.answer_boolean === val ? theme.colors.primary : theme.colors.border,
+                    backgroundColor: response?.answer_boolean === val ? theme.colors.primaryLight : theme.colors.surface,
+                    alignItems: 'center',
+                  }}
+                  activeOpacity={isReadOnly ? 1 : 0.7}
+                >
+                  <Text style={{ fontWeight: '600', color: response?.answer_boolean === val ? theme.colors.primary : theme.colors.text.secondary }}>
+                    {val ? 'Sim' : 'Não'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )
+        }
+
+        // date → mesmo comportamento do type === 'date'
+        if (fieldDef.inputType === 'date') {
+          return (
+            <>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  disabled={isReadOnly}
+                  value={(() => { const iso = parseDateDMY(dateInput); return iso ?? '' })()}
+                  onChange={(e) => handleDateWeb(e.target.value)}
+                  style={{ ...inputStyle as React.CSSProperties, width: '100%', boxSizing: 'border-box' }}
+                />
+              ) : (
+                <TextInput
+                  value={dateInput}
+                  onChangeText={handleDate}
+                  editable={!isReadOnly}
+                  style={[inputStyle, dateError ? { borderColor: theme.colors.error } : undefined]}
+                  placeholder="DD/MM/AAAA"
+                  placeholderTextColor={theme.colors.text.tertiary}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
+              )}
+              {dateError && <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: 4 }}>{dateError}</Text>}
+            </>
+          )
+        }
+
+        // long_text
+        if (fieldDef.inputType === 'long_text') {
+          return (
+            <TextInput
+              value={response?.answer_text ?? ''}
+              onChangeText={handleText}
+              editable={!isReadOnly}
+              style={[inputStyle, { minHeight: 100, textAlignVertical: 'top' }]}
+              placeholder="Sua resposta"
+              placeholderTextColor={theme.colors.text.tertiary}
+              multiline
+              numberOfLines={4}
+            />
+          )
+        }
+
+        // dropdown → usa profile_field_options do snapshot
+        if (fieldDef.inputType === 'dropdown') {
+          const options = profileFieldOptions[fieldKey] ?? []
+          return (
+            <View style={{ gap: 8 }}>
+              {options.length === 0 && (
+                <Text style={{ fontSize: 13, color: theme.colors.text.tertiary }}>Sem opções disponíveis.</Text>
+              )}
+              {options.map((opt) => {
+                const selected = response?.answer_text === opt.id
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    onPress={() => !isReadOnly && onChange({ answer_text: opt.id })}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center',
+                      justifyContent: 'space-between', padding: 12,
+                      borderRadius: theme.radius.md, borderWidth: 1.5,
+                      borderColor: selected ? theme.colors.primary : theme.colors.border,
+                      backgroundColor: selected ? theme.colors.primaryLight : theme.colors.surface,
+                    }}
+                    activeOpacity={isReadOnly ? 1 : 0.7}
+                  >
+                    <Text style={{ fontSize: 14, color: selected ? theme.colors.primary : theme.colors.text.primary, fontWeight: selected ? '600' : '400', flex: 1 }}>
+                      {opt.label}
+                    </Text>
+                    {selected && <Ionicons name="checkmark" size={16} color={theme.colors.primary} />}
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+          )
+        }
+
+        // text (default)
+        return (
+          <TextInput
+            value={response?.answer_text ?? ''}
+            onChangeText={handleText}
+            editable={!isReadOnly}
+            style={inputStyle}
+            placeholder="Sua resposta"
+            placeholderTextColor={theme.colors.text.tertiary}
+          />
+        )
+      })()}
+
       {/* Erro de validação externo (ex: obrigatório) */}
       {error && question.type !== 'date' && (
         <Text style={{ fontSize: 12, color: theme.colors.error, marginTop: 6 }}>

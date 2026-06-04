@@ -10,6 +10,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Switch,
   Alert,
   ActivityIndicator,
   Modal,
@@ -38,6 +39,11 @@ import {
   useCloneTemplate,
 } from '@/hooks/useForms'
 import { QuestionType, QUESTION_TYPE_LABELS } from '@/types/forms.types'
+import {
+  PROFILE_FIELDS,
+  PROFILE_FIELDS_BY_SECTION,
+  ProfileFieldDef,
+} from '@/constants/patientProfileFields'
 
 const QUESTION_TYPES: QuestionType[] = [
   'short_text',
@@ -50,6 +56,8 @@ const QUESTION_TYPES: QuestionType[] = [
   'scale',
   'boolean',
 ]
+
+type AddQuestionMode = 'select_type' | 'profile_field_list' | 'profile_field_form'
 
 export default function FormEditorScreen() {
   const { templateId } = useLocalSearchParams<{ templateId: string }>()
@@ -72,10 +80,26 @@ export default function FormEditorScreen() {
   const [addQuestionModal, setAddQuestionModal] = useState<{
     sectionId: string | null
   } | null>(null)
+  const [addQuestionMode, setAddQuestionMode] = useState<AddQuestionMode>('select_type')
+  // Estado do sub-formulário "Dados do Perfil"
+  const [selectedProfileField, setSelectedProfileField] = useState<ProfileFieldDef | null>(null)
+  const [profileFieldTitle, setProfileFieldTitle] = useState('')
+  const [profileFieldDescription, setProfileFieldDescription] = useState('')
+  const [profileFieldRequired, setProfileFieldRequired] = useState(false)
+
   const [addSectionVisible, setAddSectionVisible] = useState(false)
   const [newSectionTitle, setNewSectionTitle] = useState('')
   const [editingTitle, setEditingTitle] = useState(false)
   const [localTitle, setLocalTitle] = useState('')
+
+  const resetAddQuestionModal = () => {
+    setAddQuestionModal(null)
+    setAddQuestionMode('select_type')
+    setSelectedProfileField(null)
+    setProfileFieldTitle('')
+    setProfileFieldDescription('')
+    setProfileFieldRequired(false)
+  }
 
   const isReadOnly = template?.is_system ?? false
 
@@ -118,13 +142,35 @@ export default function FormEditorScreen() {
           title: QUESTION_TYPE_LABELS[type],
           sort_order: sortOrder,
         })
-        setAddQuestionModal(null)
+        resetAddQuestionModal()
       } catch (e: unknown) {
         Alert.alert('Erro', e instanceof Error ? e.message : 'Erro ao criar pergunta.')
       }
     },
     [templateId, template, createQuestion],
   )
+
+  const handleAddProfileFieldQuestion = useCallback(async () => {
+    if (!templateId || !selectedProfileField || !profileFieldTitle.trim()) return
+    const sectionId = addQuestionModal?.sectionId ?? null
+    const section = template?.sections.find((s) => s.id === sectionId)
+    const sortOrder = (section?.questions.length ?? 0) + 1
+    try {
+      await createQuestion.mutateAsync({
+        template_id: templateId,
+        section_id: sectionId,
+        type: 'profile_field',
+        title: profileFieldTitle.trim(),
+        description: profileFieldDescription.trim() || null,
+        is_required: profileFieldRequired,
+        sort_order: sortOrder,
+        profile_field_key: selectedProfileField.key,
+      })
+      resetAddQuestionModal()
+    } catch (e: unknown) {
+      Alert.alert('Erro', e instanceof Error ? e.message : 'Erro ao criar pergunta.')
+    }
+  }, [templateId, addQuestionModal, selectedProfileField, profileFieldTitle, profileFieldDescription, profileFieldRequired, template, createQuestion])
 
   const handleUpdateQuestion = useCallback(
     async (questionId: string, field: string, value: string | boolean | number) => {
@@ -363,102 +409,262 @@ export default function FormEditorScreen() {
         visible={!!addQuestionModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setAddQuestionModal(null)}
+        onRequestClose={resetAddQuestionModal}
       >
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <View
-          style={{
-            flex: 1,
-            justifyContent: 'flex-end',
-            backgroundColor: 'rgba(0,0,0,0.4)',
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: theme.colors.surface,
-              borderTopLeftRadius: 24,
-              borderTopRightRadius: 24,
-              padding: 20,
-              paddingBottom: insets.bottom + 20,
-              maxHeight: '70%',
-            }}
-          >
-            <Text
+          <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+            <View
               style={{
-                fontSize: 16,
-                fontWeight: '700',
-                color: theme.colors.text.primary,
-                marginBottom: 16,
+                backgroundColor: theme.colors.surface,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                padding: 20,
+                paddingBottom: insets.bottom + 20,
+                maxHeight: '85%',
               }}
             >
-              Tipo de pergunta
-            </Text>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {QUESTION_TYPES.map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  onPress={() =>
-                    handleAddQuestion(type, addQuestionModal?.sectionId ?? null)
-                  }
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 12,
-                    paddingVertical: 14,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.colors.border,
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: theme.radius.sm,
-                      backgroundColor: theme.colors.primaryLight,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Ionicons
-                      name={
-                        type === 'short_text'
-                          ? 'remove-outline'
-                          : type === 'long_text'
-                            ? 'reorder-four-outline'
-                            : type === 'single_choice'
-                              ? 'radio-button-on-outline'
-                              : type === 'multi_choice'
-                                ? 'checkbox-outline'
-                                : type === 'dropdown'
-                                  ? 'chevron-down-outline'
-                                  : type === 'date'
-                                    ? 'calendar-outline'
-                                    : type === 'number'
-                                      ? 'calculator-outline'
-                                      : type === 'scale'
-                                        ? 'bar-chart-outline'
-                                        : 'toggle-outline'
-                      }
-                      size={18}
-                      color={theme.colors.primary}
-                    />
-                  </View>
-                  <Text style={{ fontSize: 15, color: theme.colors.text.primary, fontWeight: '500' }}>
-                    {QUESTION_TYPE_LABELS[type]}
+              {/* ── Modo: selecionar tipo (livre ou perfil) ── */}
+              {addQuestionMode === 'select_type' && (
+                <>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text.primary, marginBottom: 16 }}>
+                    Tipo de pergunta
                   </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <Button
-              title="Cancelar"
-              variant="ghost"
-              onPress={() => setAddQuestionModal(null)}
-              fullWidth
-              style={{ marginTop: 12 }}
-            />
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    {QUESTION_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        onPress={() => handleAddQuestion(type, addQuestionModal?.sectionId ?? null)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 12,
+                          paddingVertical: 14,
+                          borderBottomWidth: 1,
+                          borderBottomColor: theme.colors.border,
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={{
+                            width: 36, height: 36,
+                            borderRadius: theme.radius.sm,
+                            backgroundColor: theme.colors.primaryLight,
+                            alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          <Ionicons
+                            name={
+                              type === 'short_text' ? 'remove-outline'
+                              : type === 'long_text' ? 'reorder-four-outline'
+                              : type === 'single_choice' ? 'radio-button-on-outline'
+                              : type === 'multi_choice' ? 'checkbox-outline'
+                              : type === 'dropdown' ? 'chevron-down-outline'
+                              : type === 'date' ? 'calendar-outline'
+                              : type === 'number' ? 'calculator-outline'
+                              : type === 'scale' ? 'bar-chart-outline'
+                              : 'toggle-outline'
+                            }
+                            size={18}
+                            color={theme.colors.primary}
+                          />
+                        </View>
+                        <Text style={{ fontSize: 15, color: theme.colors.text.primary, fontWeight: '500' }}>
+                          {QUESTION_TYPE_LABELS[type]}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+
+                    {/* Separador + opção Dados do Perfil */}
+                    <View style={{ marginTop: 12, marginBottom: 4 }}>
+                      <Text style={{ fontSize: 11, color: theme.colors.text.tertiary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                        Vinculado ao perfil
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => setAddQuestionMode('profile_field_list')}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 12,
+                        paddingVertical: 14,
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme.colors.border,
+                        opacity: 0.75,
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View
+                        style={{
+                          width: 36, height: 36,
+                          borderRadius: theme.radius.sm,
+                          backgroundColor: theme.colors.surfaceSecondary,
+                          alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="person-outline" size={18} color={theme.colors.text.secondary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, color: theme.colors.text.secondary, fontWeight: '500' }}>
+                          Dado do perfil
+                        </Text>
+                        <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginTop: 1 }}>
+                          Preenche um campo do paciente automaticamente
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={theme.colors.text.tertiary} />
+                    </TouchableOpacity>
+                  </ScrollView>
+                  <Button title="Cancelar" variant="ghost" onPress={resetAddQuestionModal} fullWidth style={{ marginTop: 12 }} />
+                </>
+              )}
+
+              {/* ── Modo: lista de campos do perfil ── */}
+              {addQuestionMode === 'profile_field_list' && (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                    <TouchableOpacity onPress={() => setAddQuestionMode('select_type')}>
+                      <Ionicons name="arrow-back" size={20} color={theme.colors.text.primary} />
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text.primary }}>
+                      Campos do perfil
+                    </Text>
+                  </View>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    {Object.entries(PROFILE_FIELDS_BY_SECTION).map(([section, fields]) => (
+                      <View key={section}>
+                        <Text style={{
+                          fontSize: 11, fontWeight: '700', color: theme.colors.primary,
+                          textTransform: 'uppercase', letterSpacing: 0.5,
+                          marginTop: 12, marginBottom: 4,
+                        }}>
+                          {section}
+                        </Text>
+                        {fields.map((field) => (
+                          <TouchableOpacity
+                            key={field.key}
+                            onPress={() => {
+                              setSelectedProfileField(field)
+                              setAddQuestionMode('profile_field_form')
+                            }}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              paddingVertical: 12,
+                              borderBottomWidth: 1,
+                              borderBottomColor: theme.colors.border,
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={{ fontSize: 14, color: theme.colors.text.primary }}>
+                              {field.label}
+                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Text style={{ fontSize: 11, color: theme.colors.text.tertiary }}>
+                                {field.inputType === 'dropdown' ? 'Lista'
+                                  : field.inputType === 'date' ? 'Data'
+                                  : field.inputType === 'boolean' ? 'Sim/Não'
+                                  : field.inputType === 'long_text' ? 'Texto longo'
+                                  : 'Texto'}
+                              </Text>
+                              <Ionicons name="chevron-forward" size={14} color={theme.colors.text.tertiary} />
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ))}
+                  </ScrollView>
+                  <Button title="Cancelar" variant="ghost" onPress={resetAddQuestionModal} fullWidth style={{ marginTop: 12 }} />
+                </>
+              )}
+
+              {/* ── Modo: formulário da pergunta de perfil ── */}
+              {addQuestionMode === 'profile_field_form' && selectedProfileField && (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                    <TouchableOpacity onPress={() => setAddQuestionMode('profile_field_list')}>
+                      <Ionicons name="arrow-back" size={20} color={theme.colors.text.primary} />
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.text.primary }}>
+                      Configurar pergunta
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: theme.colors.text.tertiary, marginBottom: 16 }}>
+                    Campo vinculado: {selectedProfileField.label}
+                  </Text>
+                  <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: theme.colors.text.secondary, marginBottom: 6 }}>
+                      Enunciado da pergunta *
+                    </Text>
+                    <TextInput
+                      value={profileFieldTitle}
+                      onChangeText={setProfileFieldTitle}
+                      placeholder={`Ex: Qual é a sua ${selectedProfileField.label.toLowerCase()}?`}
+                      placeholderTextColor={theme.colors.text.tertiary}
+                      style={{
+                        borderWidth: 1.5,
+                        borderColor: theme.colors.border,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: 12,
+                        paddingHorizontal: 14,
+                        fontSize: 15,
+                        color: theme.colors.text.primary,
+                        backgroundColor: theme.colors.surfaceSecondary,
+                        marginBottom: 14,
+                      }}
+                    />
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: theme.colors.text.secondary, marginBottom: 6 }}>
+                      Descrição / instrução (opcional)
+                    </Text>
+                    <TextInput
+                      value={profileFieldDescription}
+                      onChangeText={setProfileFieldDescription}
+                      placeholder="Ex: Isso nos ajuda a personalizar o atendimento."
+                      placeholderTextColor={theme.colors.text.tertiary}
+                      multiline
+                      numberOfLines={2}
+                      style={{
+                        borderWidth: 1.5,
+                        borderColor: theme.colors.border,
+                        borderRadius: theme.radius.md,
+                        paddingVertical: 12,
+                        paddingHorizontal: 14,
+                        fontSize: 15,
+                        color: theme.colors.text.primary,
+                        backgroundColor: theme.colors.surfaceSecondary,
+                        marginBottom: 14,
+                        minHeight: 72,
+                        textAlignVertical: 'top',
+                      }}
+                    />
+                    <View style={{
+                      flexDirection: 'row', alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingVertical: 12,
+                      borderTopWidth: 1, borderTopColor: theme.colors.border,
+                      marginBottom: 16,
+                    }}>
+                      <Text style={{ fontSize: 14, color: theme.colors.text.primary }}>Pergunta obrigatória</Text>
+                      <Switch
+                        value={profileFieldRequired}
+                        onValueChange={setProfileFieldRequired}
+                        trackColor={{ false: theme.colors.border, true: theme.colors.primary + '80' }}
+                        thumbColor={profileFieldRequired ? theme.colors.primary : '#fff'}
+                      />
+                    </View>
+                    <Button
+                      title="Adicionar pergunta"
+                      onPress={handleAddProfileFieldQuestion}
+                      loading={createQuestion.isPending}
+                      disabled={!profileFieldTitle.trim()}
+                      fullWidth
+                    />
+                    <Button title="Cancelar" variant="ghost" onPress={resetAddQuestionModal} fullWidth style={{ marginTop: 8 }} />
+                  </ScrollView>
+                </>
+              )}
+            </View>
           </View>
-        </View>
         </KeyboardAvoidingView>
       </Modal>
 

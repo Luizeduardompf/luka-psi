@@ -882,6 +882,7 @@ export default function PublicFormPage() {
                           response={(responses.get(q.id) as FormResponse) ?? null}
                           onChange={(partial) => handleResponseChange(q.id, partial)}
                           error={fieldErr}
+                          profileFieldOptions={snap.profile_field_options ?? {}}
                         />
                       </View>
                     )

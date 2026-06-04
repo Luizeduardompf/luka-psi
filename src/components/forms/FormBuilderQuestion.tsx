@@ -14,6 +14,7 @@ import {
   QuestionType,
   QUESTION_TYPE_LABELS,
 } from '@/types/forms.types'
+import { PROFILE_FIELD_BY_KEY } from '@/constants/patientProfileFields'
 import { QuestionTypeIcon } from './QuestionTypeIcon'
 
 interface Props {
@@ -83,6 +84,20 @@ export function FormBuilderQuestion({
             {QUESTION_TYPE_LABELS[question.type]}
             {question.is_required ? ' · Obrigatória' : ''}
           </Text>
+          {question.type === 'profile_field' && question.profile_field_key && (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              marginTop: 4, alignSelf: 'flex-start',
+              backgroundColor: theme.colors.surfaceSecondary,
+              borderRadius: theme.radius.sm,
+              paddingHorizontal: 6, paddingVertical: 2,
+            }}>
+              <Ionicons name="person-outline" size={10} color={theme.colors.text.tertiary} />
+              <Text style={{ fontSize: 11, color: theme.colors.text.tertiary }}>
+                Perfil: {PROFILE_FIELD_BY_KEY[question.profile_field_key as keyof typeof PROFILE_FIELD_BY_KEY]?.label ?? question.profile_field_key}
+              </Text>
+            </View>
+          )}
         </View>
         {!isReadOnly && (
           <TouchableOpacity

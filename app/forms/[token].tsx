@@ -537,6 +537,7 @@ export default function PublicFormPage() {
                         question={q}
                         response={(responses.get(q.id) as FormResponse) ?? null}
                         onChange={(partial) => handleResponseChange(q.id, partial)}
+                        profileFieldOptions={snap.profile_field_options ?? {}}
                       />
                     </View>
                   ))}

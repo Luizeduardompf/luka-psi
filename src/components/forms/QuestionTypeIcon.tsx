@@ -12,6 +12,7 @@ const ICON_MAP: Record<QuestionType, React.ComponentProps<typeof Ionicons>['name
   number: 'calculator-outline',
   scale: 'bar-chart-outline',
   boolean: 'toggle-outline',
+  profile_field: 'person-outline',
 }
 
 interface Props {

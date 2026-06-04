@@ -123,4 +123,53 @@ export const patientsService = {
       return { data: null, error: formatSupabaseError(err) }
     }
   },
+
+  /**
+   * Busca as origens de campos preenchidos via formulário para um paciente.
+   * Retorna um Record<fieldKey, { submission_id, filled_at }>.
+   */
+  async getPatientFieldSources(
+    patientId: string,
+  ): Promise<ServiceResult<Record<string, { submission_id: string | null; filled_at: string }>>> {
+    try {
+      const { data, error } = await supabase
+        .from('patient_field_sources')
+        .select('field_key, submission_id, filled_at')
+        .eq('patient_id', patientId)
+
+      if (error) return { data: null, error: formatSupabaseError(error) }
+
+      const result: Record<string, { submission_id: string | null; filled_at: string }> = {}
+      for (const row of (data ?? []) as { field_key: string; submission_id: string | null; filled_at: string }[]) {
+        result[row.field_key] = { submission_id: row.submission_id, filled_at: row.filled_at }
+      }
+
+      return { data: result, error: null }
+    } catch (err) {
+      return { data: null, error: formatSupabaseError(err) }
+    }
+  },
+
+  /**
+   * Remove as flags de origem para os campos que o psicólogo editou manualmente.
+   * Chamado após updatePatient para limpar os indicativos dos campos alterados.
+   */
+  async clearPatientFieldSources(
+    patientId: string,
+    fieldKeys: string[],
+  ): Promise<ServiceResult<null>> {
+    if (fieldKeys.length === 0) return { data: null, error: null }
+    try {
+      const { error } = await supabase
+        .from('patient_field_sources')
+        .delete()
+        .eq('patient_id', patientId)
+        .in('field_key', fieldKeys)
+
+      if (error) return { data: null, error: formatSupabaseError(error) }
+      return { data: null, error: null }
+    } catch (err) {
+      return { data: null, error: formatSupabaseError(err) }
+    }
+  },
 }

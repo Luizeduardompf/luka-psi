@@ -10,6 +10,7 @@ export type QuestionType =
   | 'number'
   | 'scale'
   | 'boolean'
+  | 'profile_field'
 
 export type SubmissionStatus = 'pending' | 'in_progress' | 'completed' | 'expired'
 
@@ -51,6 +52,8 @@ export interface FormQuestion {
   scale_min: number
   scale_max: number
   scale_step: number
+  /** Chave do campo do paciente mapeado. Presente apenas quando type === 'profile_field'. */
+  profile_field_key?: string | null
   created_at: string
 }
 
@@ -124,6 +127,8 @@ export interface SnapshotQuestion {
   scale_max: number
   scale_step: number
   options: SnapshotOption[]
+  /** Chave do campo do paciente mapeado. Presente apenas quando type === 'profile_field'. */
+  profile_field_key?: string | null
 }
 
 export interface SnapshotSection {
@@ -142,6 +147,12 @@ export interface FormSnapshot {
   custom_message: string | null
   expires_at: string | null
   snapshotted_at: string
+  /**
+   * Opções de lookup para campos de perfil com dropdown.
+   * Chave = profile_field_key (ex: 'gender_id'), valor = lista de { id, label }.
+   * Populado no momento do envio do formulário.
+   */
+  profile_field_options?: Record<string, { id: string; label: string }[]>
 }
 
 // ─── Rich types (com joins) ───────────────────────────────────────────────────
@@ -203,6 +214,8 @@ export interface CreateQuestionInput {
   scale_min?: number
   scale_max?: number
   scale_step?: number
+  /** Chave do campo do paciente. Obrigatório quando type === 'profile_field'. */
+  profile_field_key?: string | null
 }
 
 export interface SendFormInput {
@@ -241,6 +254,7 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   number: 'Número',
   scale: 'Escala',
   boolean: 'Sim / Não',
+  profile_field: 'Dado do perfil',
 }
 
 export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
