@@ -1,6 +1,9 @@
 -- Migration: profile_field_questions
 -- Adiciona suporte a perguntas de formulário vinculadas ao perfil do paciente
 
+-- 0. Adicionar 'profile_field' ao enum question_type
+ALTER TYPE question_type ADD VALUE IF NOT EXISTS 'profile_field';
+
 -- 1. Coluna profile_field_key em form_questions
 ALTER TABLE form_questions
   ADD COLUMN IF NOT EXISTS profile_field_key TEXT NULL;
